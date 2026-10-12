@@ -8,12 +8,11 @@ import androidx.room.PrimaryKey
     tableName = "users",
     indices = [Index(value = ["email"], unique = true)]
 )
-class User {
-
+data class User(
     @PrimaryKey(autoGenerate = true)
-    var id: Long = 0
+    val id: Long = 0,
+    val fullName: String = "",
+    val email: String = "",
+    val password: String = ""
+)
 
-    var fullName: String? = null
-    var email: String? = null
-    var password: String? = null
-}
