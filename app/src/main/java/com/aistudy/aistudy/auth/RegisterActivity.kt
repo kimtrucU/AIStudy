@@ -71,11 +71,10 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        val user = User(
-            fullName = fullName,
-            email = email,
-            password = password
-        )
+        val user = User()
+        user.fullName = fullName
+        user.email = email
+        user.password = password
 
         try {
             val userId = userDao.insert(user)
@@ -85,10 +84,7 @@ class RegisterActivity : AppCompatActivity() {
                 .apply()
 
             Toast.makeText(this, R.string.auth_success_register, Toast.LENGTH_SHORT).show()
-            val intent = Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
         } catch (e: SQLiteConstraintException) {
             Toast.makeText(this, R.string.auth_error_email_taken, Toast.LENGTH_SHORT).show()
