@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import com.aistudy.aistudy.ask.AskFragment
 import com.aistudy.aistudy.auth.LoginActivity
@@ -31,13 +32,13 @@ class MainActivity : AppCompatActivity() {
             val userDao = AppDatabase.getInstance(this).userDao()
             val user = userDao.findById(userId)
             if (user == null) {
-                prefs.edit().remove(LoginActivity.KEY_USER_ID).apply()
+                prefs.edit { remove(LoginActivity.KEY_USER_ID) }
                 navigateToLogin()
                 return
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            prefs.edit().remove(LoginActivity.KEY_USER_ID).apply()
+            prefs.edit { remove(LoginActivity.KEY_USER_ID) }
             navigateToLogin()
             return
         }
@@ -108,10 +109,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun logout() {
-        getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
-            .edit()
-            .remove(LoginActivity.KEY_USER_ID)
-            .apply()
+        getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE).edit {
+            remove(LoginActivity.KEY_USER_ID)
+        }
 
         navigateToLogin()
     }

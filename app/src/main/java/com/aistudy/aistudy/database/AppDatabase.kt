@@ -7,10 +7,10 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        User::class
+        User::class,
     ],
     version = 1,
-    exportSchema = false
+    exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "aistudy.db"
                 )
                     .allowMainThreadQueries()
-                    .fallbackToDestructiveMigration(true)
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { instance = it }
             }

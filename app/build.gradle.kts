@@ -33,14 +33,15 @@ android {
 }
 
 dependencies {
-    implementation(libs.activity.ktx)
-    implementation(libs.appcompat)
-    implementation(libs.constraintlayout)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.fragment.ktx)
     implementation(libs.material)
-    implementation(libs.fragment)
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.junit)
 }

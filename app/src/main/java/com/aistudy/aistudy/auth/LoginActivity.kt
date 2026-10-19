@@ -9,6 +9,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
@@ -71,17 +72,19 @@ class LoginActivity : AppCompatActivity() {
         val userDao = AppDatabase.getInstance(this).userDao()
         val user = userDao.findByEmail(email)
 
-        if (user == null || password != user.password) {
+        if ((user == null) || (password != user.password)) {
             Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
             return
         }
 
-        getSharedPreferences(PREFS_AUTH, MODE_PRIVATE)
-            .edit()
-            .putLong(KEY_USER_ID, user.id)
-            .apply()
+        getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).edit {
+            putLong(KEY_USER_ID, user.id)
+        }
 
-        startActivity(Intent(this, MainActivity::class.java))
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
         finish()
     }
 }
