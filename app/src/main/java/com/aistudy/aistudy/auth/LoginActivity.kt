@@ -69,8 +69,10 @@ class LoginActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.auth_error_password_short, Toast.LENGTH_SHORT).show()
             return
         }
-        val userDao = AppDatabase.getInstance(this).userDao()
-        val user = userDao.findByEmail(email)
+
+        try {
+            val userDao = AppDatabase.getInstance(this).userDao()
+            val user = userDao.findByEmail(email)
 
         if (user == null || password != user.password) {
             Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
@@ -82,9 +84,14 @@ class LoginActivity : AppCompatActivity() {
             .putLong(KEY_USER_ID, user.id)
             .apply()
 
-
-
-        startActivity(Intent(this, MainActivity::class.java))
-        finish()
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, R.string.auth_error_unknown, Toast.LENGTH_SHORT).show()
+        }
     }
 }
