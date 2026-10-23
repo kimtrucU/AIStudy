@@ -96,7 +96,7 @@ class AskFragment : Fragment() {
         }
 
         val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isEmpty() || apiKey == "YOUR_REAL_GEMINI_API_KEY") {
+        if (apiKey.isEmpty() || (apiKey == "YOUR_REAL_GEMINI_API_KEY")) {
             Toast.makeText(requireContext(), "GEMINI_API_KEY not set", Toast.LENGTH_SHORT).show()
             Log.e(TAG, "submit blocked: api key missing or placeholder")
             return

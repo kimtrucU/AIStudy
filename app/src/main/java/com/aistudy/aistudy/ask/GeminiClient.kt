@@ -9,7 +9,7 @@ import java.net.URL
 
 object GeminiClient {
     private const val TAG = "GeminiClient"
-    private const val MODEL = "gemini-3.5-flash"
+    private const val MODEL = "gemini-1.5-flash"
 
     fun ask(apiKey: String, prompt: String): String {
         val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent?key=$apiKey"
@@ -31,7 +31,7 @@ object GeminiClient {
         conn.outputStream.use { os -> os.write(bytes) }
 
         val code = conn.responseCode
-        if (code in 200..299) {
+        if ((code in 200..299)) {
             val responseBody = conn.inputStream.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).readText()
             }

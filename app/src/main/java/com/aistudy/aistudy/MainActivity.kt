@@ -5,12 +5,15 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import com.aistudy.aistudy.ask.AskFragment
 import com.aistudy.aistudy.auth.LoginActivity
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
 import com.aistudy.aistudy.history.HistoryFragment
 import com.aistudy.aistudy.home.HomeFragment
+import com.aistudy.aistudy.onboarding.OnboardingActivity
 import com.aistudy.aistudy.progress.ProgressFragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -31,14 +34,22 @@ class MainActivity : AppCompatActivity() {
             val userDao = AppDatabase.getInstance(this).userDao()
             val user = userDao.findById(userId)
             if (user == null) {
-                prefs.edit().remove(LoginActivity.KEY_USER_ID).apply()
+                prefs.edit { remove(LoginActivity.KEY_USER_ID) }
                 navigateToLogin()
                 return
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            prefs.edit().remove(LoginActivity.KEY_USER_ID).apply()
+            prefs.edit { remove(LoginActivity.KEY_USER_ID) }
             navigateToLogin()
+            return
+        }
+
+        ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), userId)
+        val profile = AppDatabase.getInstance(this).profileDao().getByUserId(userId)
+        if ((profile != null) && !profile.onboarded) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
             return
         }
 
