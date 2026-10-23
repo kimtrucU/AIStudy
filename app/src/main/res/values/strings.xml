@@ -1,4 +1,13 @@
 <resources>
     <string name="app_name">AIStudy</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="ask_title">Ask Gemini</string>
+    <string name="ask_hint">Type your question here...</string>
+    <string name="ask_send">Send</string>
+    <string name="ask_sending">Sending...</string>
+    <string name="ask_suggestion_1">Explain Newton\'s laws</string>
+    <string name="ask_suggestion_2">How to write a for loop in Kotlin?</string>
+    <string name="ask_suggestion_3">What caused World War I?</string>
+    <string name="ask_suggestion_4">Solve 2x + 3 = 7</string>
 </resources>
