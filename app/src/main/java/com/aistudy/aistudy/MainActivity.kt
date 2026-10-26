@@ -5,13 +5,15 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
 import com.aistudy.aistudy.ask.AskFragment
 import com.aistudy.aistudy.auth.LoginActivity
+import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
 import com.aistudy.aistudy.history.HistoryFragment
 import com.aistudy.aistudy.home.HomeFragment
+import com.aistudy.aistudy.onboarding.OnboardingActivity
 import com.aistudy.aistudy.progress.ProgressFragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -21,10 +23,32 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val userId = getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
-            .getLong(LoginActivity.KEY_USER_ID, -1)
+        val prefs = getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
+        val userId = prefs.getLong(LoginActivity.KEY_USER_ID, -1)
         if (userId == -1L) {
-            startActivity(Intent(this, LoginActivity::class.java))
+            navigateToLogin()
+            return
+        }
+
+        try {
+            val userDao = AppDatabase.getInstance(this).userDao()
+            val user = userDao.findById(userId)
+            if (user == null) {
+                prefs.edit { remove(LoginActivity.KEY_USER_ID) }
+                navigateToLogin()
+                return
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            prefs.edit { remove(LoginActivity.KEY_USER_ID) }
+            navigateToLogin()
+            return
+        }
+
+        ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), userId)
+        val profile = AppDatabase.getInstance(this).profileDao().getByUserId(userId)
+        if ((profile != null) && !profile.onboarded) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
             return
         }
@@ -32,8 +56,8 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
             insets
         }
 
@@ -50,16 +74,22 @@ class MainActivity : AppCompatActivity() {
 
         val bottomNav: BottomNavigationView = findViewById(R.id.bottom_nav)
         bottomNav.setOnItemSelectedListener { item ->
-            val fragment: Fragment = when (item.itemId) {
-                R.id.nav_home -> HomeFragment()
-                R.id.nav_ask -> AskFragment()
-                R.id.nav_history -> HistoryFragment()
-                R.id.nav_progress -> ProgressFragment()
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+            val (targetFragment, isSameTab) = when (item.itemId) {
+                R.id.nav_home -> Pair(HomeFragment(), currentFragment is HomeFragment)
+                R.id.nav_ask -> Pair(AskFragment(), currentFragment is AskFragment)
+                R.id.nav_history -> Pair(HistoryFragment(), currentFragment is HistoryFragment)
+                R.id.nav_progress -> Pair(ProgressFragment(), currentFragment is ProgressFragment)
                 else -> return@setOnItemSelectedListener false
             }
+
+            if (isSameTab) {
+                return@setOnItemSelectedListener true
+            }
+
             supportFragmentManager
                 .beginTransaction()
-                .replace(R.id.fragment_container, fragment)
+                .replace(R.id.fragment_container, targetFragment)
                 .commit()
             true
         }
@@ -67,6 +97,14 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             bottomNav.selectedItemId = R.id.nav_home
         }
+    }
+
+    private fun navigateToLogin() {
+        val intent = Intent(this, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     fun showLogoutConfirmationDialog() {
@@ -86,9 +124,6 @@ class MainActivity : AppCompatActivity() {
             .remove(LoginActivity.KEY_USER_ID)
             .apply()
 
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
+        navigateToLogin()
     }
 }
