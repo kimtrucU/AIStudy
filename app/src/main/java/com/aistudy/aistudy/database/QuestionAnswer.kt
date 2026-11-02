@@ -15,5 +15,8 @@ class QuestionAnswer {
     var steps: String? = null
     var finalAnswer: String? = null
     var starred: Boolean = false
-    var createdAt: Long = 0
+    var createdAt: Long = System.currentTimeMillis()
+    var extrasJson: String? = null
+    var reviewedAt: Long = 0
+    var reviewedSeconds: Int = 0
 }

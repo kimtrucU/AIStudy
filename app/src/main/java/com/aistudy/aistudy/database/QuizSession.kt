@@ -1,0 +1,18 @@
+package com.aistudy.aistudy.database
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "quiz_sessions")
+class QuizSession {
+
+    @PrimaryKey(autoGenerate = true)
+    var id: Long = 0
+
+    var userId: Long = 0
+    var subject: String? = null
+    var score: Int = 0
+    var total: Int = 0
+    var completed: Boolean = false
+    var createdAt: Long = System.currentTimeMillis()
+}
