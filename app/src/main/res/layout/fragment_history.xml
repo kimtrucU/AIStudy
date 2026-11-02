@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/auth_background"
@@ -97,6 +98,18 @@
                 android:textSize="13sp" />
 
             <TextView
+                android:id="@+id/chip_language"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_history_chip"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="@string/subject_language"
+                android:textColor="@color/auth_foreground"
+                android:textSize="13sp" />
+
+            <TextView
                 android:id="@+id/chip_starred"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -109,6 +122,16 @@
                 android:textSize="13sp" />
         </LinearLayout>
     </HorizontalScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_practice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/quiz_practice"
+        android:visibility="gone"
+        app:backgroundTint="@color/auth_brand"
+        app:cornerRadius="12dp" />
 
     <FrameLayout
         android:layout_width="match_parent"
