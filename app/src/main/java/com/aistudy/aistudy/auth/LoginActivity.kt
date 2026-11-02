@@ -15,6 +15,7 @@ import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
 
+
 class LoginActivity : AppCompatActivity() {
 
     companion object {
@@ -80,6 +81,8 @@ class LoginActivity : AppCompatActivity() {
             .edit()
             .putLong(KEY_USER_ID, user.id)
             .apply()
+
+
 
         startActivity(Intent(this, MainActivity::class.java))
         finish()
