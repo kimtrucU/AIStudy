@@ -10,4 +10,10 @@
     <string name="ask_suggestion_2">How to write a for loop in Kotlin?</string>
     <string name="ask_suggestion_3">What caused World War I?</string>
     <string name="ask_suggestion_4">Solve 2x + 3 = 7</string>
+
+    <string name="subject_math">Math</string>
+    <string name="subject_science">Science</string>
+    <string name="subject_code">Code</string>
+    <string name="subject_history">History</string>
+    <string name="subject_unknown">Unknown</string>
 </resources>
