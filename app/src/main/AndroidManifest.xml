@@ -26,6 +26,15 @@
         <activity
             android:name=".auth.RegisterActivity"
             android:exported="false" />
+        <activity
+            android:name=".onboarding.OnboardingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".answer.AnswerActivity"
+            android:exported="false" />
+        <activity
+            android:name=".quiz.QuizActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

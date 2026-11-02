@@ -9,8 +9,10 @@ import androidx.core.view.ViewCompat
 import com.aistudy.aistudy.ask.AskFragment
 import com.aistudy.aistudy.auth.LoginActivity
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
 import com.aistudy.aistudy.history.HistoryFragment
 import com.aistudy.aistudy.home.HomeFragment
+import com.aistudy.aistudy.onboarding.OnboardingActivity
 import com.aistudy.aistudy.progress.ProgressFragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -33,6 +35,16 @@ class MainActivity : AppCompatActivity() {
             if (user == null) {
                 prefs.edit().remove(LoginActivity.KEY_USER_ID).apply()
                 navigateToLogin()
+                return
+            }
+
+            val profileDao = AppDatabase.getInstance(this).profileDao()
+            ProfileDefaults.ensureExists(profileDao, userId)
+            val profile = profileDao.getByUserId(userId)
+            if (profile != null && !profile.onboarded) {
+                val intent = Intent(this, OnboardingActivity::class.java)
+                startActivity(intent)
+                finish()
                 return
             }
         } catch (e: Exception) {
