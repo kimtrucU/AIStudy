@@ -1,13 +1,9 @@
 package com.aistudy.aistudy.progress
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.aistudy.aistudy.R
@@ -21,40 +17,59 @@ import kotlin.math.roundToInt
 
 class ProgressFragment : Fragment() {
 
+    companion object {
+        private const val XP_MAX = 1200
+        private const val MIN_PRACTICE_QA = 2
+        private const val DAY_MS = 24L * 60L * 60L * 1000L
+        private const val WINDOW_MS = 30L * DAY_MS
+        private val SUBJECTS = arrayOf(
+            "math", "science", "code", "history", "language"
+        )
+    }
+
+    private lateinit var tvUserEmail: TextView
+    private lateinit var btnLogout: TextView
     private lateinit var tvXpTotal: TextView
     private lateinit var tvLevel: TextView
-    private lateinit var progressXp: ProgressBar
     private lateinit var tvXpPercent: TextView
-
+    private lateinit var progressXp: ProgressBar
     private lateinit var tvStatStreak: TextView
     private lateinit var tvStatQuestions: TextView
     private lateinit var tvStatStars: TextView
 
-    private lateinit var tvSubjectsEmpty: TextView
+    private lateinit var tvQuizAccuracy: TextView
+    private lateinit var tvReviewTime: TextView
+    private lateinit var tvInsight1: TextView
+    private lateinit var tvInsight2: TextView
+    private lateinit var tvInsightsEmpty: TextView
+    private lateinit var cardReviewSuggest: LinearLayout
+    private lateinit var tvReviewSubtitle: TextView
+
     private lateinit var rowMath: LinearLayout
-    private lateinit var tvCountMath: TextView
-    private lateinit var barMath: ProgressBar
-
     private lateinit var rowScience: LinearLayout
-    private lateinit var tvCountScience: TextView
-    private lateinit var barScience: ProgressBar
-
     private lateinit var rowCode: LinearLayout
-    private lateinit var tvCountCode: TextView
-    private lateinit var barCode: ProgressBar
-
     private lateinit var rowHistory: LinearLayout
+    private lateinit var rowLanguage: LinearLayout
+    private lateinit var tvCountMath: TextView
+    private lateinit var tvCountScience: TextView
+    private lateinit var tvCountCode: TextView
     private lateinit var tvCountHistory: TextView
+    private lateinit var tvCountLanguage: TextView
+    private lateinit var barMath: ProgressBar
+    private lateinit var barScience: ProgressBar
+    private lateinit var barCode: ProgressBar
     private lateinit var barHistory: ProgressBar
+    private lateinit var barLanguage: ProgressBar
+    private lateinit var tvSubjectsEmpty: TextView
 
     private lateinit var badgeStarter: LinearLayout
     private lateinit var badgeWeek: LinearLayout
     private lateinit var badgeMath: LinearLayout
     private lateinit var badgeScholar: LinearLayout
 
-    private var profileDao: ProfileDao? = null
     private var qaDao: QuestionAnswerDao? = null
-    private var userId: Long = -1L
+    private var currentUserId = -1L
+    private var reviewSubject: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,55 +78,7 @@ class ProgressFragment : Fragment() {
     ): View? {
         return inflater.inflate(R.layout.fragment_progress, container, false)
     }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        tvXpTotal = view.findViewById(R.id.tv_xp_total)
-        tvLevel = view.findViewById(R.id.tv_level)
-        progressXp = view.findViewById(R.id.progress_xp)
-        tvXpPercent = view.findViewById(R.id.tv_xp_percent)
-
-        tvStatStreak = view.findViewById(R.id.tv_stat_streak)
-        tvStatQuestions = view.findViewById(R.id.tv_stat_questions)
-        tvStatStars = view.findViewById(R.id.tv_stat_stars)
-
-        tvSubjectsEmpty = view.findViewById(R.id.tv_subjects_empty)
-        rowMath = view.findViewById(R.id.row_math)
-        tvCountMath = view.findViewById(R.id.tv_count_math)
-        barMath = view.findViewById(R.id.bar_math)
-
-        rowScience = view.findViewById(R.id.row_science)
-        tvCountScience = view.findViewById(R.id.tv_count_science)
-        barScience = view.findViewById(R.id.bar_science)
-
-        rowCode = view.findViewById(R.id.row_code)
-        tvCountCode = view.findViewById(R.id.tv_count_code)
-        barCode = view.findViewById(R.id.bar_code)
-
-        rowHistory = view.findViewById(R.id.row_history)
-        tvCountHistory = view.findViewById(R.id.tv_count_history)
-        barHistory = view.findViewById(R.id.bar_history)
-
-        badgeStarter = view.findViewById(R.id.badge_starter)
-        badgeWeek = view.findViewById(R.id.badge_week)
-        badgeMath = view.findViewById(R.id.badge_math)
-        badgeScholar = view.findViewById(R.id.badge_scholar)
-
-        val db = AppDatabase.getInstance(requireContext())
-        profileDao = db.profileDao()
-        qaDao = db.questionAnswerDao()
-
-        val prefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        userId = prefs.getLong("user_id", -1L)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (userId != -1L) {
-            loadProgress()
-        }
-    }
+}
 
     private fun loadProgress() {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -136,7 +103,7 @@ class ProgressFragment : Fragment() {
             withContext(Dispatchers.Main) {
                 tvXpTotal.text = xp.toString()
                 tvLevel.text = getString(R.string.progress_level_scholar, level)
-                
+
                 val percent = minOf(100, ((xp * 100f) / XP_MAX).roundToInt())
                 progressXp.progress = percent
                 tvXpPercent.text = getString(R.string.progress_xp_percent, percent)
