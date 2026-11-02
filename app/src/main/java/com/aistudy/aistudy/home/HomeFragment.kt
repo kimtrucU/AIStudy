@@ -139,10 +139,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun selectTab(menuItemId: Int) {
-        val activity = activity
-        if (activity is MainActivity) {
-            activity.findViewById<BottomNavigationView>(R.id.bottom_nav)?.selectedItemId = menuItemId
-        }
+        (activity as? MainActivity)?.findViewById<BottomNavigationView>(R.id.bottom_nav)?.selectedItemId = menuItemId
     }
 
     private fun subjectLabel(subject: String?): String {
