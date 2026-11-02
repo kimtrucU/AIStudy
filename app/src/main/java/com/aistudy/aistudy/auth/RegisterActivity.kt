@@ -10,11 +10,13 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
 import com.aistudy.aistudy.database.User
 
 class RegisterActivity : AppCompatActivity() {
@@ -78,15 +80,16 @@ class RegisterActivity : AppCompatActivity() {
 
         try {
             val userId = userDao.insert(user)
-            getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
-                .edit()
-                .putLong(LoginActivity.KEY_USER_ID, userId)
-                .apply()
+            getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE).edit {
+                putLong(LoginActivity.KEY_USER_ID, userId)
+            }
+
+            ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), userId)
 
             Toast.makeText(this, R.string.auth_success_register, Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, MainActivity::class.java))
             finish()
-        } catch (e: SQLiteConstraintException) {
+        } catch (_: SQLiteConstraintException) {
             Toast.makeText(this, R.string.auth_error_email_taken, Toast.LENGTH_SHORT).show()
         }
     }

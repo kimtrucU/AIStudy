@@ -1,4 +1,78 @@
 <resources>
     <string name="app_name">AIStudy</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <!-- Subjects -->
+    <string name="subject_math">Math</string>
+    <string name="subject_science">Science</string>
+    <string name="subject_code">Programming</string>
+    <string name="subject_history">History</string>
+    <string name="subject_language">Language</string>
+    <string name="subject_other">Other</string>
+
+    <!-- Ask -->
+    <string name="ask_title">Ask AI Mentor</string>
+    <string name="ask_subtitle">Enter your question or attach a picture of your homework.</string>
+    <string name="ask_hint">Type your question here…</string>
+    <string name="ask_send">Ask Question</string>
+    <string name="ask_sending">Thinking…</string>
+    <string name="ask_suggestion_header">Try asking</string>
+    <string name="ask_suggestion_1">Explain Newton\'s second law of motion simply.</string>
+    <string name="ask_suggestion_2">How do I solve 2x + 5 = 15 step by step?</string>
+    <string name="ask_suggestion_3">What is the difference between recursion and iteration in coding?</string>
+    <string name="ask_suggestion_4">Summarize the main causes of World War 1.</string>
+    <string name="ask_empty_question">Please enter a question or pick an image.</string>
+    <string name="ask_no_api_key">Gemini API key is not configured in BuildConfig.</string>
+    <string name="ask_camera">Camera</string>
+    <string name="ask_gallery">Gallery</string>
+    <string name="ask_remove_image">Remove</string>
+    <string name="ask_image_preview">Selected question image</string>
+    <string name="ask_empty_both">Enter a question or attach an image.</string>
+    <string name="ask_image_default_question">Please solve the problem shown in this image.</string>
+    <string name="ask_permission_camera">Camera permission is required to take a photo.</string>
+    <string name="ask_permission_gallery">Photo access is required to pick an image.</string>
+    <string name="ask_image_error">Could not load the selected image.</string>
+
+    <!-- Answer -->
+    <string name="answer_not_found">Question answer not found.</string>
+    <string name="answer_image_label">Attached image</string>
+    <string name="answer_difficulty_easy">Easy</string>
+    <string name="answer_difficulty_medium">Medium</string>
+    <string name="answer_difficulty_hard">Hard</string>
+    <string name="answer_action_simplify">Simplify</string>
+    <string name="answer_action_alternative">Alternative</string>
+    <string name="answer_action_concepts">Concepts</string>
+    <string name="answer_action_mistakes">Mistakes</string>
+    <string name="answer_action_followups">Follow-ups</string>
+    <string name="answer_extras_loading">Generating learning tips…</string>
+    <string name="answer_extras_error">Could not generate tips. Try again.</string>
+    <string name="answer_extras_empty">Tap an action above to get learning support.</string>
+    <string name="answer_mark_reviewed">Mark reviewed (+10 XP)</string>
+    <string name="answer_reviewed">Reviewed ✓</string>
+    <string name="answer_review_xp_toast">+10 XP for reviewing</string>
+
+    <!-- Home -->
+    <string name="home_welcome">Welcome back,</string>
+    <string name="home_xp_label">%1$d XP</string>
+    <string name="home_streak_label">%1$d day streak</string>
+    <string name="home_quick_ask">Ask a Question</string>
+    <string name="home_subjects_title">Your Subject Statistics</string>
+    <string name="home_subject_count">%1$d questions</string>
+    <string name="home_subject_math_icon">∑</string>
+    <string name="home_subject_science_icon">⚛</string>
+    <string name="home_subject_code_icon">&lt;/&gt;</string>
+    <string name="home_subject_history_icon">🏛</string>
+    <string name="home_subject_language_icon">あ</string>
+
+    <!-- History -->
+    <string name="history_title">Question History</string>
+    <string name="history_empty">No questions asked yet.</string>
+    <string name="history_filter_all">All</string>
+    <string name="history_filter_starred">Starred ★</string>
+
+    <!-- Progress -->
+    <string name="progress_title">Your Learning Progress</string>
+    <string name="progress_xp_title">Total Experience Points</string>
+    <string name="progress_streak_title">Current Streak</string>
+    <string name="progress_breakdown_title">Questions by Subject</string>
+    <string name="progress_no_data">Ask questions to see your progress!</string>
 </resources>

@@ -7,14 +7,20 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        User::class
+        User::class,
+        Profile::class,
+        QuestionAnswer::class,
     ],
-    version = 1,
-    exportSchema = false
+    version = 5,
+    exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun userDao(): UserDao
+
+    abstract fun profileDao(): ProfileDao
+
+    abstract fun questionAnswerDao(): QuestionAnswerDao
 
     companion object {
 
@@ -26,10 +32,10 @@ abstract class AppDatabase : RoomDatabase() {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "aistudy.db"
+                    "aistudy.db",
                 )
                     .allowMainThreadQueries()
-                    .fallbackToDestructiveMigration(true)
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { instance = it }
             }
