@@ -14,6 +14,8 @@ import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -73,7 +75,7 @@ class LoginActivity : AppCompatActivity() {
             val userDao = AppDatabase.getInstance(this).userDao()
             val user = userDao.findByEmail(email)
 
-        if (user == null || password != user.password) {
+        if (user == null || !PasswordHasher.matches(password, user.password)) {
             Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
             return
         }
@@ -82,6 +84,8 @@ class LoginActivity : AppCompatActivity() {
             .edit()
             .putLong(KEY_USER_ID, user.id)
             .apply()
+
+        ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), user.id)
 
             val intent = Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

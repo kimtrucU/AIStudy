@@ -15,6 +15,8 @@ import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
+
 import com.aistudy.aistudy.database.User
 
 class RegisterActivity : AppCompatActivity() {
@@ -74,7 +76,7 @@ class RegisterActivity : AppCompatActivity() {
         val user = User(
             fullName = fullName,
             email = email,
-            password = password
+            password = PasswordHasher.hash(password)
         )
 
         try {
@@ -83,6 +85,10 @@ class RegisterActivity : AppCompatActivity() {
                 .edit()
                 .putLong(LoginActivity.KEY_USER_ID, userId)
                 .apply()
+
+            ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), userId)
+
+
 
             Toast.makeText(this, R.string.auth_success_register, Toast.LENGTH_SHORT).show()
             val intent = Intent(this, MainActivity::class.java).apply {
