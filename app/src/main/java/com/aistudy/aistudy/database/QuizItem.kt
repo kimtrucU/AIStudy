@@ -14,6 +14,9 @@ class QuizItem {
     var question: String? = null
     var answer: String? = null
     var optionsJson: String? = null
+    var correctAnswer: String? = null
+    var explanation: String? = null
+    var userAnswer: String? = null
 
     @ColumnInfo(name = "isCorrect")
     var correct: Boolean? = null

@@ -11,6 +11,7 @@ class QuizSession {
 
     var userId: Long = 0
     var subject: String? = null
+    var sourceQaIds: String? = null
     var score: Int = 0
     var total: Int = 0
     var completed: Boolean = false

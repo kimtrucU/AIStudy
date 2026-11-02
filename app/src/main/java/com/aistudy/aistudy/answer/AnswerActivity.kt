@@ -5,12 +5,15 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.content.Intent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.quiz.QuizActivity
+import com.google.android.material.button.MaterialButton
 import org.json.JSONArray
 
 class AnswerActivity : AppCompatActivity() {
@@ -50,6 +53,14 @@ class AnswerActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tv_question).text = item.question ?: ""
         findViewById<TextView>(R.id.tv_final_answer).text = item.finalAnswer ?: ""
 
+        val btnPractice = findViewById<MaterialButton>(R.id.btn_practice)
+        btnPractice.text = getString(R.string.quiz_practice_on, subjectLabel(item.subject))
+        btnPractice.setOnClickListener {
+            val intent = Intent(this, QuizActivity::class.java)
+            intent.putExtra(QuizActivity.EXTRA_SUBJECT, item.subject)
+            startActivity(intent)
+        }
+
         val layoutSteps = findViewById<LinearLayout>(R.id.layout_steps)
         val stepsStr = item.steps
         if (!stepsStr.isNullOrEmpty()) {
@@ -70,6 +81,17 @@ class AnswerActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun subjectLabel(subject: String?): String {
+        return when (subject) {
+            "math" -> getString(R.string.subject_math)
+            "science" -> getString(R.string.subject_science)
+            "code" -> getString(R.string.subject_code)
+            "history" -> getString(R.string.subject_history)
+            "language" -> getString(R.string.subject_language)
+            else -> getString(R.string.subject_other)
         }
     }
 }

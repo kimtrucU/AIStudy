@@ -9,20 +9,24 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.answer.AnswerActivity
 import com.aistudy.aistudy.auth.LoginActivity
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.QuestionAnswerDao
+import com.aistudy.aistudy.quiz.QuizActivity
+import com.aistudy.aistudy.xp.UnlockCatalog
+import com.aistudy.aistudy.xp.XpRules
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
-import kotlin.math.roundToInt
 
 class HomeFragment : Fragment() {
 
     companion object {
-        private const val XP_MAX = 1200
+        private const val MIN_PRACTICE_QA = 2
     }
 
     private lateinit var tvLevelBadge: TextView
@@ -45,6 +49,8 @@ class HomeFragment : Fragment() {
     private lateinit var tvCountHistory: TextView
 
     private var latestQaId = -1L
+    private var currentUserId = -1L
+    private var qaDao: QuestionAnswerDao? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -84,6 +90,11 @@ class HomeFragment : Fragment() {
                 startActivity(intent)
             }
         }
+
+        view.findViewById<View>(R.id.card_subject_math).setOnClickListener { openPractice("math") }
+        view.findViewById<View>(R.id.card_subject_science).setOnClickListener { openPractice("science") }
+        view.findViewById<View>(R.id.card_subject_code).setOnClickListener { openPractice("code") }
+        view.findViewById<View>(R.id.card_subject_history).setOnClickListener { openPractice("history") }
     }
 
     override fun onResume() {
@@ -107,19 +118,28 @@ class HomeFragment : Fragment() {
         val user = db.userDao().getById(userId)
         val profile = db.profileDao().getByUserId(userId)
         val qaDao = db.questionAnswerDao()
+        this.qaDao = qaDao
+        currentUserId = userId
 
         val fullName = user?.fullName ?: ""
         val xp = profile?.xp ?: 0
         val streak = profile?.streak ?: 0
-        val level = maxOf(1, xp / 100)
-        val xpPct = minOf(100, ((xp * 100f) / XP_MAX).roundToInt())
+        val level = XpRules.levelFromXp(xp)
+        val xpPct = XpRules.progressPercentToNext(xp)
+        val nextXp = XpRules.nextLevelThreshold(xp)
 
         tvLevelBadge.text = level.toString()
         tvStreak.text = getString(R.string.home_streak_days, streak)
-        tvXpLabel.text = getString(R.string.home_xp_progress, xp, XP_MAX)
+        tvXpLabel.text = getString(R.string.home_xp_progress, xp, nextXp)
         tvXpPercent.text = getString(R.string.home_xp_percent, xpPct)
         progressXp.progress = xpPct
         tvGreeting.text = getString(R.string.home_greeting, fullName)
+
+        if (profile != null) {
+            activity?.findViewById<View>(R.id.main)?.setBackgroundResource(
+                UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(profile.themeId))
+            )
+        }
 
         val latest = qaDao.getLatestByUserId(userId)
         if (latest != null) {
@@ -136,6 +156,21 @@ class HomeFragment : Fragment() {
         tvCountScience.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "science"))
         tvCountCode.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "code"))
         tvCountHistory.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "history"))
+    }
+
+    private fun openPractice(subject: String) {
+        val dao = qaDao
+        if (context == null || dao == null || currentUserId == -1L) {
+            return
+        }
+        val count = dao.countBySubject(currentUserId, subject)
+        if (count < MIN_PRACTICE_QA) {
+            Toast.makeText(requireContext(), R.string.quiz_need_more, Toast.LENGTH_LONG).show()
+            return
+        }
+        val intent = Intent(requireContext(), QuizActivity::class.java)
+        intent.putExtra(QuizActivity.EXTRA_SUBJECT, subject)
+        startActivity(intent)
     }
 
     private fun selectTab(menuItemId: Int) {
