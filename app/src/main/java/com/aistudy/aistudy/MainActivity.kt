@@ -9,8 +9,10 @@ import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -77,7 +79,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
             insets
         }
 
@@ -148,5 +150,27 @@ class MainActivity : AppCompatActivity() {
             return
         }
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    fun showLogoutConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.auth_logout_confirm_title)
+            .setMessage(R.string.auth_logout_confirm_message)
+            .setPositiveButton(R.string.auth_logout) { _, _ ->
+                logout()
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
+    }
+
+    fun logout() {
+        getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE).edit {
+            remove(LoginActivity.KEY_USER_ID)
+        }
+
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 }

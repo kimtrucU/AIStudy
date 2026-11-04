@@ -2,13 +2,14 @@ package com.aistudy.aistudy.database
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 
 @Dao
 interface QuestionAnswerDao {
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(qa: QuestionAnswer): Long
 
     @Update
@@ -16,6 +17,9 @@ interface QuestionAnswerDao {
 
     @Query("SELECT * FROM question_answers WHERE userId = :userId ORDER BY createdAt DESC")
     fun getAllByUserId(userId: Long): List<QuestionAnswer>
+
+    @Query("SELECT * FROM question_answers WHERE userId = :userId ORDER BY createdAt DESC")
+    fun getByUserId(userId: Long): List<QuestionAnswer>
 
     @Query("SELECT * FROM question_answers WHERE userId = :userId ORDER BY createdAt DESC LIMIT 1")
     fun getLatestByUserId(userId: Long): QuestionAnswer?

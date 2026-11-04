@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         QuizItem::class,
         Friend::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
