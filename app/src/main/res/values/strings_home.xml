@@ -11,12 +11,15 @@
 
     <string name="home_recent_title">Recent question</string>
     <string name="home_view_all">View all</string>
+    <string name="home_review_title">Suggested practice</string>
+    <string name="home_review_cta">Practice now →</string>
     <string name="home_subjects_title">Subjects</string>
     <string name="home_subject_count">%d questions</string>
     <string name="home_subject_math_icon">∑</string>
     <string name="home_subject_science_icon">🔬</string>
     <string name="home_subject_code_icon">{ }</string>
     <string name="home_subject_history_icon">⌛</string>
+    <string name="home_subject_language_icon">Aa</string>
 
     <string name="subject_math">Math</string>
     <string name="subject_science">Science</string>

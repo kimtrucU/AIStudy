@@ -1,6 +1,7 @@
 package com.aistudy.aistudy.answer
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.os.Bundle
@@ -26,6 +27,7 @@ import com.aistudy.aistudy.database.ProfileDao
 import com.aistudy.aistudy.database.QuestionAnswer
 import com.aistudy.aistudy.database.QuestionAnswerDao
 import com.aistudy.aistudy.quiz.QuizActivity
+import com.aistudy.aistudy.xp.XpRules
 import com.google.android.material.button.MaterialButton
 import org.json.JSONArray
 import org.json.JSONObject
@@ -141,7 +143,7 @@ class AnswerActivity : AppCompatActivity() {
         val layoutImage = findViewById<LinearLayout>(R.id.layout_answer_image)
         val imgAnswer = findViewById<ImageView>(R.id.img_answer)
         if (!imagePath.isNullOrEmpty() && File(imagePath).exists()) {
-            val bmp = BitmapFactory.decodeFile(imagePath)
+            val bmp = decodeSampledBitmap(imagePath, 1024)
             if (bmp != null) {
                 imgAnswer.setImageBitmap(bmp)
                 layoutImage.visibility = View.VISIBLE
@@ -205,8 +207,8 @@ class AnswerActivity : AppCompatActivity() {
 
         val profile = profileDao.getByUserId(item.userId)
         if (profile != null) {
-            profile.xp += XP_REVIEW
-            profileDao.update(profile)
+            XpRules.recordDailyActivity(profile, profileDao)
+            XpRules.addXp(profile, profileDao, XpRules.REVIEW)
         }
 
         Toast.makeText(this, R.string.answer_review_xp_toast, Toast.LENGTH_SHORT).show()
@@ -277,6 +279,7 @@ class AnswerActivity : AppCompatActivity() {
                 qaDao?.updateExtras(item.id, updatedJson)
 
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     extrasLoading = false
                     progressExtras.visibility = View.GONE
                     if (activeExtraKey == key) {
@@ -285,6 +288,7 @@ class AnswerActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     extrasLoading = false
                     progressExtras.visibility = View.GONE
                     tvExtras.setText(R.string.answer_extras_error)
@@ -405,6 +409,17 @@ class AnswerActivity : AppCompatActivity() {
             "language" -> getString(R.string.subject_language)
             else -> getString(R.string.subject_other)
         }
+    }
+
+    private fun decodeSampledBitmap(path: String, maxDim: Int): Bitmap? {
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, opts)
+        var sample = 1
+        while (opts.outWidth / sample > maxDim || opts.outHeight / sample > maxDim) {
+            sample *= 2
+        }
+        val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sample }
+        return BitmapFactory.decodeFile(path, decodeOpts)
     }
 
     private fun difficultyLabel(difficulty: String?): String {

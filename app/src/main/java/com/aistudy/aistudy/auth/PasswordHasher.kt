@@ -24,7 +24,10 @@ object PasswordHasher {
         val parts = stored.split('$')
         if (parts.size != 3 || parts[0] != PREFIX) {
             // Legacy plaintext record
-            return MessageDigest.isEqual(password.toByteArray(), stored.toByteArray())
+            return MessageDigest.isEqual(
+                password.toByteArray(Charsets.UTF_8),
+                stored.toByteArray(Charsets.UTF_8)
+            )
         }
         return try {
             val salt = Base64.getDecoder().decode(parts[1])

@@ -11,6 +11,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
@@ -28,6 +29,7 @@ import com.aistudy.aistudy.onboarding.OnboardingActivity
 import com.aistudy.aistudy.progress.ProgressFragment
 import com.aistudy.aistudy.xp.FriendSeeder
 import com.aistudy.aistudy.xp.UnlockCatalog
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -74,6 +76,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         FriendSeeder.ensureSeeded(AppDatabase.getInstance(this).friendDao(), userId)
+        syncNightMode(profile?.themeId)
 
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
@@ -83,10 +86,16 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        if (profile != null) {
-            findViewById<View>(R.id.main).setBackgroundResource(
-                UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(profile.themeId))
-            )
+        applyThemeBackground(profile?.themeId)
+
+        val toolbar: MaterialToolbar = findViewById(R.id.toolbar)
+        toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.action_logout) {
+                showLogoutConfirmationDialog()
+                true
+            } else {
+                false
+            }
         }
 
         bottomNav = findViewById(R.id.bottom_nav)
@@ -150,6 +159,28 @@ class MainActivity : AppCompatActivity() {
             return
         }
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    fun applyTheme(themeId: String?) {
+        applyThemeBackground(themeId)
+        syncNightMode(themeId)
+    }
+
+    private fun applyThemeBackground(themeId: String?) {
+        findViewById<View>(R.id.main)?.setBackgroundResource(
+            UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(themeId))
+        )
+    }
+
+    private fun syncNightMode(themeId: String?) {
+        val desiredMode = if (UnlockCatalog.normalizeThemeId(themeId) == UnlockCatalog.THEME_NIGHT) {
+            AppCompatDelegate.MODE_NIGHT_YES
+        } else {
+            AppCompatDelegate.MODE_NIGHT_NO
+        }
+        if (AppCompatDelegate.getDefaultNightMode() != desiredMode) {
+            AppCompatDelegate.setDefaultNightMode(desiredMode)
+        }
     }
 
     fun showLogoutConfirmationDialog() {

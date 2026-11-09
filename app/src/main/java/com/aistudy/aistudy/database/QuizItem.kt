@@ -11,8 +11,8 @@ class QuizItem {
     var id: Long = 0
 
     var sessionId: Long = 0
-    var question: String? = null
-    var answer: String? = null
+    var type: String? = null
+    var prompt: String? = null
     var optionsJson: String? = null
     var correctAnswer: String? = null
     var explanation: String? = null

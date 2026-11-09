@@ -14,6 +14,9 @@
     <string name="quiz_correct">Correct! 🎉</string>
     <string name="quiz_incorrect">Incorrect</string>
     <string name="quiz_correct_answer">Correct answer: %s</string>
+    <string name="quiz_correct_answer_label">Correct answer: %s</string>
+    <string name="quiz_select_option">Please select an option</string>
+    <string name="quiz_enter_answer">Please enter your answer</string>
     <string name="quiz_explanation_label">Explanation</string>
     <string name="quiz_result_title">Quiz Completed!</string>
     <string name="quiz_result_score">Score: %1$d / %2$d</string>

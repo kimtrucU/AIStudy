@@ -52,44 +52,40 @@ object GeminiClient {
         val body = JSONObject()
         body.put("contents", JSONArray().put(content))
 
-        val bytes = body.toString().toByteArray(StandardCharsets.UTF_8)
-        Log.d(TAG, "request body bytes=${bytes.size}")
-        conn.outputStream.use { os ->
-            os.write(bytes)
-        }
+        try {
+            val bytes = body.toString().toByteArray(StandardCharsets.UTF_8)
+            Log.d(TAG, "request body bytes=${bytes.size}")
+            conn.outputStream.use { os ->
+                os.write(bytes)
+            }
 
-        val code = conn.responseCode
-        Log.d(TAG, "response httpCode=$code")
-        val reader = if (code in 200..299) {
-            BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8))
-        } else {
-            BufferedReader(InputStreamReader(conn.errorStream, StandardCharsets.UTF_8))
-        }
+            val code = conn.responseCode
+            Log.d(TAG, "response httpCode=$code")
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val responseBody = if (stream != null) {
+                BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { it.readText() }
+            } else {
+                ""
+            }
 
-        val sb = StringBuilder()
-        var line = reader.readLine()
-        while (line != null) {
-            sb.append(line)
-            line = reader.readLine()
-        }
-        reader.close()
+            if (code < 200 || code >= 300) {
+                Log.e(TAG, "request failed httpCode=$code body=${truncate(responseBody, 500)}")
+                throw Exception("HTTP $code: $responseBody")
+            }
 
-        val responseBody = sb.toString()
-        if (code < 200 || code >= 300) {
-            Log.e(TAG, "request failed httpCode=$code body=${truncate(responseBody, 500)}")
-            throw Exception("HTTP $code: $responseBody")
+            Log.d(TAG, "response body length=${responseBody.length}")
+            val json = JSONObject(responseBody)
+            val text = json.getJSONArray("candidates")
+                .getJSONObject(0)
+                .getJSONObject("content")
+                .getJSONArray("parts")
+                .getJSONObject(0)
+                .getString("text")
+            Log.d(TAG, "parsed text length=${text.length} preview=${truncate(text, 200)}")
+            return text
+        } finally {
+            conn.disconnect()
         }
-
-        Log.d(TAG, "response body length=${responseBody.length}")
-        val json = JSONObject(responseBody)
-        val text = json.getJSONArray("candidates")
-            .getJSONObject(0)
-            .getJSONObject("content")
-            .getJSONArray("parts")
-            .getJSONObject(0)
-            .getString("text")
-        Log.d(TAG, "parsed text length=${text.length} preview=${truncate(text, 200)}")
-        return text
     }
 
     private fun truncate(s: String?, max: Int): String {

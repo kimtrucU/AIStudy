@@ -36,6 +36,10 @@ class HomeFragment : Fragment() {
     private lateinit var progressXp: ProgressBar
     private lateinit var tvGreeting: TextView
     private lateinit var btnAsk: MaterialButton
+    private lateinit var btnPracticeRecent: MaterialButton
+
+    private lateinit var cardReviewSuggest: LinearLayout
+    private lateinit var tvReviewSubtitle: TextView
 
     private lateinit var sectionRecent: LinearLayout
     private lateinit var tvViewAll: TextView
@@ -47,8 +51,11 @@ class HomeFragment : Fragment() {
     private lateinit var tvCountScience: TextView
     private lateinit var tvCountCode: TextView
     private lateinit var tvCountHistory: TextView
+    private lateinit var tvCountLanguage: TextView
 
     private var latestQaId = -1L
+    private var latestSubject: String? = null
+    private var reviewSubject: String? = null
     private var currentUserId = -1L
     private var qaDao: QuestionAnswerDao? = null
 
@@ -69,6 +76,10 @@ class HomeFragment : Fragment() {
         progressXp = view.findViewById(R.id.progress_xp)
         tvGreeting = view.findViewById(R.id.tv_greeting)
         btnAsk = view.findViewById(R.id.btn_ask)
+        btnPracticeRecent = view.findViewById(R.id.btn_practice_recent)
+
+        cardReviewSuggest = view.findViewById(R.id.card_review_suggest)
+        tvReviewSubtitle = view.findViewById(R.id.tv_review_subtitle)
 
         sectionRecent = view.findViewById(R.id.section_recent)
         tvViewAll = view.findViewById(R.id.tv_view_all)
@@ -80,8 +91,15 @@ class HomeFragment : Fragment() {
         tvCountScience = view.findViewById(R.id.tv_count_science)
         tvCountCode = view.findViewById(R.id.tv_count_code)
         tvCountHistory = view.findViewById(R.id.tv_count_history)
+        tvCountLanguage = view.findViewById(R.id.tv_count_language)
 
         btnAsk.setOnClickListener { selectTab(R.id.nav_ask) }
+        btnPracticeRecent.setOnClickListener {
+            latestSubject?.let { openPractice(it) }
+        }
+        cardReviewSuggest.setOnClickListener {
+            reviewSubject?.let { openPractice(it) }
+        }
         tvViewAll.setOnClickListener { selectTab(R.id.nav_history) }
         cardRecent.setOnClickListener {
             if (latestQaId != -1L) {
@@ -95,6 +113,7 @@ class HomeFragment : Fragment() {
         view.findViewById<View>(R.id.card_subject_science).setOnClickListener { openPractice("science") }
         view.findViewById<View>(R.id.card_subject_code).setOnClickListener { openPractice("code") }
         view.findViewById<View>(R.id.card_subject_history).setOnClickListener { openPractice("history") }
+        view.findViewById<View>(R.id.card_subject_language).setOnClickListener { openPractice("language") }
     }
 
     override fun onResume() {
@@ -103,18 +122,16 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadDashboard() {
-        if (context == null) {
-            return
-        }
+        val ctx = context ?: return
 
-        val userId = requireContext()
+        val userId = ctx
             .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
             .getLong(LoginActivity.KEY_USER_ID, -1L)
         if (userId == -1L) {
             return
         }
 
-        val db = AppDatabase.getInstance(requireContext())
+        val db = AppDatabase.getInstance(ctx)
         val user = db.userDao().getById(userId)
         val profile = db.profileDao().getByUserId(userId)
         val qaDao = db.questionAnswerDao()
@@ -144,31 +161,53 @@ class HomeFragment : Fragment() {
         val latest = qaDao.getLatestByUserId(userId)
         if (latest != null) {
             latestQaId = latest.id
+            latestSubject = latest.subject
             sectionRecent.visibility = View.VISIBLE
             tvRecentQuestion.text = latest.question
             tvRecentSubject.text = subjectLabel(latest.subject)
+            val subjectCount = latest.subject?.let { qaDao.countBySubject(userId, it) } ?: 0
+            if (subjectCount >= MIN_PRACTICE_QA) {
+                btnPracticeRecent.visibility = View.VISIBLE
+                btnPracticeRecent.text = getString(R.string.quiz_practice_on, subjectLabel(latest.subject))
+            } else {
+                btnPracticeRecent.visibility = View.GONE
+            }
         } else {
             latestQaId = -1L
+            latestSubject = null
             sectionRecent.visibility = View.GONE
+            btnPracticeRecent.visibility = View.GONE
+        }
+
+        val topSubject = qaDao.getTopSubjectByUserId(userId)
+        if (topSubject != null && qaDao.countBySubject(userId, topSubject) >= MIN_PRACTICE_QA) {
+            reviewSubject = topSubject
+            tvReviewSubtitle.text = getString(R.string.home_review_subtitle, subjectLabel(topSubject))
+            cardReviewSuggest.visibility = View.VISIBLE
+        } else {
+            reviewSubject = null
+            cardReviewSuggest.visibility = View.GONE
         }
 
         tvCountMath.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "math"))
         tvCountScience.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "science"))
         tvCountCode.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "code"))
         tvCountHistory.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "history"))
+        tvCountLanguage.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "language"))
     }
 
     private fun openPractice(subject: String) {
-        val dao = qaDao
-        if (context == null || dao == null || currentUserId == -1L) {
+        val ctx = context ?: return
+        val dao = qaDao ?: return
+        if (currentUserId == -1L) {
             return
         }
         val count = dao.countBySubject(currentUserId, subject)
         if (count < MIN_PRACTICE_QA) {
-            Toast.makeText(requireContext(), R.string.quiz_need_more, Toast.LENGTH_LONG).show()
+            Toast.makeText(ctx, R.string.quiz_need_more, Toast.LENGTH_LONG).show()
             return
         }
-        val intent = Intent(requireContext(), QuizActivity::class.java)
+        val intent = Intent(ctx, QuizActivity::class.java)
         intent.putExtra(QuizActivity.EXTRA_SUBJECT, subject)
         startActivity(intent)
     }

@@ -1,10 +1,14 @@
 package com.aistudy.aistudy.notify
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aistudy.aistudy.MainActivity
@@ -32,10 +36,10 @@ object NotificationHelper {
     fun show(
         context: Context,
         notificationId: Int,
-        title: String?,
-        body: String?,
-        openTab: String?,
-        qaId: Long
+        title: String,
+        body: String,
+        openTab: String? = null,
+        qaId: Long = -1
     ) {
         ensureChannel(context)
 
@@ -64,6 +68,19 @@ object NotificationHelper {
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
-        NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return
+            }
+        }
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+        } catch (_: SecurityException) {
+            // Permission revoked at runtime
+        }
     }
 }

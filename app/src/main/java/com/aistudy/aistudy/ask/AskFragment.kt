@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -30,6 +31,7 @@ import com.aistudy.aistudy.auth.LoginActivity
 import com.aistudy.aistudy.database.AppDatabase
 import com.aistudy.aistudy.database.ProfileDefaults
 import com.aistudy.aistudy.database.QuestionAnswer
+import com.aistudy.aistudy.xp.XpRules
 import com.google.android.material.button.MaterialButton
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -52,7 +54,29 @@ class AskFragment : Fragment() {
             return key.substring(0, 4) + "..." + key.substring(key.length - 4)
         }
 
-        private fun encodeFileBase64(file: File): String {
+        private fun encodeFileBase64(file: File, fallbackMime: String?): Pair<String, String> {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, opts)
+            val maxDim = 1280
+            val needsResize = opts.outWidth > maxDim || opts.outHeight > maxDim || file.length() > 1_500_000L
+            if (needsResize && opts.outWidth > 0 && opts.outHeight > 0) {
+                var sample = 1
+                while (opts.outWidth / sample > maxDim || opts.outHeight / sample > maxDim) {
+                    sample *= 2
+                }
+                val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sample }
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath, decodeOpts)
+                if (bitmap != null) {
+                    ByteArrayOutputStream().use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                        bitmap.recycle()
+                        return Pair(
+                            Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP),
+                            "image/jpeg"
+                        )
+                    }
+                }
+            }
             FileInputStream(file).use { input ->
                 ByteArrayOutputStream().use { out ->
                     val buf = ByteArray(8192)
@@ -61,7 +85,10 @@ class AskFragment : Fragment() {
                         out.write(buf, 0, n)
                         n = input.read(buf)
                     }
-                    return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+                    return Pair(
+                        Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP),
+                        fallbackMime ?: "image/jpeg"
+                    )
                 }
             }
         }
@@ -95,7 +122,9 @@ class AskFragment : Fragment() {
             if (granted) {
                 launchCamera()
             } else {
-                Toast.makeText(requireContext(), R.string.ask_permission_camera, Toast.LENGTH_SHORT).show()
+                context?.let {
+                    Toast.makeText(it, R.string.ask_permission_camera, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -105,7 +134,9 @@ class AskFragment : Fragment() {
             if (granted) {
                 pickImage.launch("image/*")
             } else {
-                Toast.makeText(requireContext(), R.string.ask_permission_gallery, Toast.LENGTH_SHORT).show()
+                context?.let {
+                    Toast.makeText(it, R.string.ask_permission_gallery, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -116,7 +147,9 @@ class AskFragment : Fragment() {
             if (success && file != null && file.exists()) {
                 setSelectedImage(file, "image/jpeg")
             } else {
-                Toast.makeText(requireContext(), R.string.ask_image_error, Toast.LENGTH_SHORT).show()
+                context?.let {
+                    Toast.makeText(it, R.string.ask_image_error, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -124,16 +157,17 @@ class AskFragment : Fragment() {
             ActivityResultContracts.GetContent(),
         ) { uri ->
             if (uri == null) return@registerForActivityResult
+            val ctx = context ?: return@registerForActivityResult
             try {
                 val copied = copyUriToQaImages(uri)
-                var mime = requireContext().contentResolver.getType(uri)
+                var mime = ctx.contentResolver.getType(uri)
                 if (mime == null || !mime.startsWith("image/")) {
                     mime = "image/jpeg"
                 }
                 setSelectedImage(copied, mime)
             } catch (e: Exception) {
                 Log.e(TAG, "copy gallery image failed", e)
-                Toast.makeText(requireContext(), R.string.ask_image_error, Toast.LENGTH_SHORT).show()
+                Toast.makeText(ctx, R.string.ask_image_error, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -308,7 +342,7 @@ class AskFragment : Fragment() {
         }
 
         val prefs = requireActivity().getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
-        val userId = prefs.getLong(LoginActivity.KEY_USER_ID, -1)
+        val userId = prefs.getLong(LoginActivity.KEY_USER_ID, -1L)
         if (userId == -1L) return
 
         val db = AppDatabase.getInstance(requireContext())
@@ -321,19 +355,23 @@ class AskFragment : Fragment() {
 
         val prompt = buildPrompt(level, style, questionFinal)
 
-        val imageBase64 = if (file != null && file.exists()) encodeFileBase64(file) else null
-        val imageMime = if (imageBase64 != null) (selectedMimeType ?: "image/jpeg") else null
+        val fallbackMime = selectedMimeType
         val imagePath = file?.absolutePath
 
         setLoading(true)
 
         executor?.execute {
             try {
+                val encodedImage = if (file != null && file.exists()) {
+                    encodeFileBase64(file, fallbackMime)
+                } else {
+                    null
+                }
                 val rawResponse = GeminiClient.ask(
                     apiKey = apiKey,
                     prompt = prompt,
-                    imageBase64 = imageBase64,
-                    mimeType = imageMime,
+                    imageBase64 = encodedImage?.first,
+                    mimeType = encodedImage?.second,
                 )
                 Log.d(TAG, "rawResponse length=${rawResponse.length}")
 
@@ -377,26 +415,32 @@ class AskFragment : Fragment() {
                 val qaId = qaDao.insert(qa)
                 Log.d(TAG, "saved qaId=$qaId imagePath=$imagePath")
 
-                if (profile != null) {
-                    profile.xp += XP_PER_QUESTION
-                    profileDao.update(profile)
+                val freshProfile = profileDao.getByUserId(userId)
+                if (freshProfile != null) {
+                    XpRules.recordDailyActivity(freshProfile, profileDao)
+                    XpRules.addXp(freshProfile, profileDao, XpRules.ASK)
                 }
 
-                requireActivity().runOnUiThread {
+                val act = activity ?: return@execute
+                act.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
                     setLoading(false)
                     clearSelectedImage()
                     editQuestion.setText("")
 
-                    val intent = Intent(requireContext(), AnswerActivity::class.java)
+                    val intent = Intent(act, AnswerActivity::class.java)
                     intent.putExtra(AnswerActivity.EXTRA_QA_ID, qaId)
-                    startActivity(intent)
+                    act.startActivity(intent)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "ask failed", e)
-                requireActivity().runOnUiThread {
+                val act = activity ?: return@execute
+                act.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
                     setLoading(false)
+                    val ctx = context ?: return@runOnUiThread
                     Toast.makeText(
-                        requireContext(),
+                        ctx,
                         "Error: ${e.message}",
                         Toast.LENGTH_LONG,
                     ).show()
