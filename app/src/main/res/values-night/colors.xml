@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="auth_background">#1C1F28</color>
+    <color name="auth_surface">#1C1F28</color>
+    <color name="auth_shell_outer">#14171F</color>
+    <color name="auth_foreground">#F3F4F6</color>
+    <color name="auth_card">#272B36</color>
+    <color name="auth_muted_foreground">#9CA3AF</color>
+    <color name="auth_brand">#3B9E74</color>
+    <color name="auth_brand_soft">#2E3B9E74</color>
+    <color name="auth_brand_ring">#663B9E74</color>
+    <color name="auth_primary_foreground">#F8FDFA</color>
+    <color name="auth_input_ring">#26FFFFFF</color>
+    <color name="auth_input_ring_focus">#663B9E74</color>
+    <color name="auth_shell_ring">#1FFFFFFF</color>
+
+    <color name="streak">#E67E22</color>
+    <color name="streak_soft">#3B2816</color>
+    <color name="xp_track">#374151</color>
+    <color name="progress_xp_card_bg">#111827</color>
+</resources>
+

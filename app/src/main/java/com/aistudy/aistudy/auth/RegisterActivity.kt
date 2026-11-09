@@ -76,7 +76,7 @@ class RegisterActivity : AppCompatActivity() {
         val user = User(
             fullName = fullName,
             email = email,
-            password = password
+            password = PasswordHasher.hash(password)
         )
 
         try {
