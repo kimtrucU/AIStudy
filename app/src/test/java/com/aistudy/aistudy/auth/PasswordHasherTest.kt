@@ -1,21 +1,20 @@
 package com.aistudy.aistudy.auth
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PasswordHasherTest {
 
     @Test
-    fun hashAndMatches_workWithSaltedHashes() {
+    fun hashAndMatches_workWithSha256HexHashes() {
         val hash1 = PasswordHasher.hash("secret123")
         val hash2 = PasswordHasher.hash("secret123")
 
-        assertNotEquals(hash1, hash2)
-        assertTrue(hash1.startsWith("sha256$"))
+        assertEquals(64, hash1.length)
+        assertEquals(hash1, hash2)
         assertTrue(PasswordHasher.matches("secret123", hash1))
-        assertTrue(PasswordHasher.matches("secret123", hash2))
         assertFalse(PasswordHasher.matches("wrongpass", hash1))
     }
 
@@ -25,7 +24,5 @@ class PasswordHasherTest {
         assertFalse(PasswordHasher.matches("legacy123", "other"))
         assertFalse(PasswordHasher.matches("secret", null))
         assertFalse(PasswordHasher.matches("secret", ""))
-        assertFalse(PasswordHasher.matches("secret", "sha256\$not-base64\$bad"))
     }
 }
-

@@ -43,14 +43,14 @@
                     android:layout_height="wrap_content"
                     android:text="@string/progress_title"
                     android:textColor="@color/auth_foreground"
-                    android:textSize="22sp"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tv_user_email"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="4dp"
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="@color/auth_muted_foreground"
@@ -63,8 +63,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:background="@drawable/bg_logout_pill"
-                android:clickable="true"
-                android:focusable="true"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="8dp"
                 android:text="@string/progress_logout"

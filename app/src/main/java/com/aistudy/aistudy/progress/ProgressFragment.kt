@@ -194,14 +194,7 @@ class ProgressFragment : Fragment() {
             .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
             .getLong(LoginActivity.KEY_USER_ID, -1L)
 
-        btnLogout.setOnClickListener {
-            val main = activity as? MainActivity
-            if (main != null) {
-                main.showLogoutConfirmationDialog()
-            } else {
-                logoutFallback()
-            }
-        }
+        btnLogout.setOnClickListener { logout() }
         cardReviewSuggest.setOnClickListener {
             reviewSubject?.let { openPractice(it) }
         }
@@ -219,13 +212,17 @@ class ProgressFragment : Fragment() {
         }
     }
 
-    private fun logoutFallback() {
-        val ctx = context ?: return
-        ctx.getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
+    private fun logout() {
+        if (context == null) {
+            return
+        }
+        requireContext()
+            .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
             .edit()
             .remove(LoginActivity.KEY_USER_ID)
             .apply()
-        val intent = Intent(ctx, LoginActivity::class.java)
+
+        val intent = Intent(requireContext(), LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
     }
