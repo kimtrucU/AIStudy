@@ -214,10 +214,24 @@ class AskFragment : Fragment() {
         val btnSuggestion3: MaterialButton = view.findViewById(R.id.btn_suggestion_3)
         val btnSuggestion4: MaterialButton = view.findViewById(R.id.btn_suggestion_4)
 
-        btnSuggestion1.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_1) }
-        btnSuggestion2.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_2) }
-        btnSuggestion3.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_3) }
-        btnSuggestion4.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_4) }
+        btnSuggestion1.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_4) }
+        btnSuggestion2.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_1) }
+        btnSuggestion3.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_2) }
+        btnSuggestion4.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_3) }
+
+        view.findViewById<View>(R.id.btn_voice_orb)?.setOnClickListener {
+            onCameraClick()
+        }
+        view.findViewById<View>(R.id.btn_ask_logout)?.setOnClickListener {
+            val ctx = context ?: return@setOnClickListener
+            ctx.getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
+                .edit()
+                .remove(LoginActivity.KEY_USER_ID)
+                .apply()
+            val intent = Intent(ctx, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+        }
     }
 
     private fun onCameraClick() {
@@ -508,7 +522,7 @@ class AskFragment : Fragment() {
         btnSend.isEnabled = !loading
         btnCamera.isEnabled = !loading
         btnGallery.isEnabled = !loading
-        btnSend.setText(if (loading) R.string.ask_sending else R.string.ask_send)
+        btnSend.text = if (loading) "…" else "➤"
         progressLoading.visibility = if (loading) View.VISIBLE else View.GONE
     }
 

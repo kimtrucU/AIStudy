@@ -167,6 +167,9 @@ class HistoryFragment : Fragment() {
         })
 
         refreshChips()
+        view.findViewById<View>(R.id.btn_history_profile)?.setOnClickListener {
+            activity?.findViewById< com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_nav)?.selectedItemId = R.id.nav_progress
+        }
     }
 
     override fun onResume() {

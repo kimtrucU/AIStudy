@@ -1,60 +1,238 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
+    android:background="@color/auth_surface"
     android:clipToPadding="false"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="24dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/ask_title"
-            android:textColor="@color/auth_foreground"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/ask_subtitle"
-            android:textColor="@color/auth_muted_foreground"
-            android:textSize="14sp" />
-
-        <EditText
-            android:id="@+id/edit_question"
+        <!-- Top Header: AIStudy + Power/Logout Icon -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_auth_input"
-            android:gravity="top|start"
-            android:hint="@string/ask_hint"
-            android:inputType="textMultiLine"
-            android:padding="12dp"
-            android:textColor="@color/auth_foreground"
-            android:textColorHint="@color/auth_muted_foreground"
-            android:textSize="14sp" />
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI"
+                android:textColor="@color/auth_brand"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Study"
+                android:textColor="@color/auth_foreground"
+                android:textSize="26sp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/btn_ask_logout"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/auth_logout"
+                android:padding="6dp"
+                android:src="@drawable/ic_power_logout" />
+        </LinearLayout>
+
+        <!-- Glowing Crimson Neural Sphere -->
+        <ImageView
+            android:layout_width="196dp"
+            android:layout_height="196dp"
+            android:layout_marginTop="12dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_neural_sphere" />
+
+        <!-- "Ask anything" Serif Title -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:text="Ask "
+                android:textColor="@color/auth_foreground"
+                android:textSize="34sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:text="anything"
+                android:textColor="#E86B84"
+                android:textSize="34sp" />
+        </LinearLayout>
+
+        <!-- Suggestion Chips (2 on top row + 1 centered below + 4th) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_suggestion_1"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_ask_suggestion_card"
+                android:gravity="center"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="✦  Summarize text"
+                android:textAllCaps="false"
+                android:textColor="@color/auth_foreground"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:cornerRadius="14dp"
+                app:strokeColor="#522634" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_suggestion_2"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_ask_suggestion_card"
+                android:gravity="center"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="🧠  Explain a concept"
+                android:textAllCaps="false"
+                android:textColor="@color/auth_foreground"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:cornerRadius="14dp"
+                app:strokeColor="#522634" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_suggestion_3"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_ask_suggestion_card"
+            android:gravity="center"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingHorizontal="14dp"
+            android:text="∑  Solve an equation"
+            android:textAllCaps="false"
+            android:textColor="@color/auth_foreground"
+            android:textSize="12sp"
+            app:backgroundTint="@null"
+            app:cornerRadius="14dp"
+            app:strokeColor="#522634" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_suggestion_4"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_history_chip"
+            android:gravity="center"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingHorizontal="16dp"
+            android:text="@string/ask_suggestion_4"
+            android:textAllCaps="false"
+            android:textColor="@color/auth_muted_foreground"
+            android:textSize="11sp"
+            android:visibility="gone"
+            app:backgroundTint="@null"
+            app:cornerRadius="999dp" />
+
+        <!-- Camera / Gallery Action Pills -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_camera"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_history_chip"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="📷  Camera"
+                android:textAllCaps="false"
+                android:textColor="@color/auth_foreground"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:cornerRadius="999dp"
+                app:strokeColor="#45232E" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_gallery"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_history_chip"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="🖼️  Gallery"
+                android:textAllCaps="false"
+                android:textColor="@color/auth_foreground"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:cornerRadius="999dp"
+                app:strokeColor="#45232E" />
+        </LinearLayout>
+
+        <!-- Image Preview -->
         <LinearLayout
             android:id="@+id/layout_image_preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:background="@drawable/bg_home_card"
             android:orientation="vertical"
+            android:padding="12dp"
             android:visibility="gone">
 
             <ImageView
                 android:id="@+id/img_preview"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="160dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/ask_image_preview"
                 android:scaleType="centerCrop" />
@@ -66,45 +244,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:text="@string/ask_remove_image"
-                android:textColor="@color/auth_muted_foreground" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_camera"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:text="@string/ask_camera"
-                android:textColor="@color/auth_foreground"
-                app:strokeColor="@color/auth_input_ring" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_gallery"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:text="@string/ask_gallery"
-                android:textColor="@color/auth_foreground"
-                app:strokeColor="@color/auth_input_ring" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_send"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/ask_send"
-                app:backgroundTint="@color/auth_brand"
-                app:cornerRadius="24dp" />
+                android:textColor="@color/auth_brand_bright" />
         </LinearLayout>
 
         <ProgressBar
@@ -113,64 +253,72 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
+            android:indeterminateTint="@color/auth_brand_bright"
             android:visibility="gone" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/ask_suggestion_header"
-            android:textColor="@color/auth_foreground"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_suggestion_1"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+        <!-- Bottom Pill Composer Bar: Waveform Orb + "Ask me anything..." + Crimson Send Circle -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="start|center_vertical"
-            android:text="@string/ask_suggestion_1"
-            android:textAllCaps="false"
-            android:textColor="@color/auth_foreground"
-            app:strokeColor="@color/auth_input_ring" />
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_ask_composer_pill"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_suggestion_2"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="start|center_vertical"
-            android:text="@string/ask_suggestion_2"
-            android:textAllCaps="false"
-            android:textColor="@color/auth_foreground"
-            app:strokeColor="@color/auth_input_ring" />
+            <TextView
+                android:id="@+id/btn_voice_orb"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_ask_orb_circle"
+                android:gravity="center"
+                android:text="ılılı"
+                android:textColor="@color/auth_brand_bright"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_suggestion_3"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="start|center_vertical"
-            android:text="@string/ask_suggestion_3"
-            android:textAllCaps="false"
-            android:textColor="@color/auth_foreground"
-            app:strokeColor="@color/auth_input_ring" />
+            <EditText
+                android:id="@+id/edit_question"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:gravity="center_vertical|start"
+                android:hint="Ask me anything..."
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="4"
+                android:minHeight="40dp"
+                android:textColor="@color/auth_foreground"
+                android:textColorHint="@color/auth_muted_foreground"
+                android:textSize="15sp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_suggestion_4"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="start|center_vertical"
-            android:text="@string/ask_suggestion_4"
-            android:textAllCaps="false"
-            android:textColor="@color/auth_foreground"
-            app:strokeColor="@color/auth_input_ring" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_send"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:background="@drawable/bg_ask_send_circle"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:text="➤"
+                android:textAllCaps="false"
+                android:textColor="@color/auth_primary_foreground"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="@null"
+                app:cornerRadius="999dp"
+                tools:ignore="UnusedAttribute" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

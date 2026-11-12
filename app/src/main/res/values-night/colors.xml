@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="auth_background">#1C1F28</color>
-    <color name="auth_surface">#1C1F28</color>
-    <color name="auth_shell_outer">#14171F</color>
-    <color name="auth_foreground">#F3F4F6</color>
-    <color name="auth_card">#272B36</color>
-    <color name="auth_muted_foreground">#9CA3AF</color>
-    <color name="auth_brand">#3B9E74</color>
-    <color name="auth_brand_soft">#2E3B9E74</color>
-    <color name="auth_brand_ring">#663B9E74</color>
-    <color name="auth_primary_foreground">#F8FDFA</color>
-    <color name="auth_input_ring">#26FFFFFF</color>
-    <color name="auth_input_ring_focus">#663B9E74</color>
-    <color name="auth_shell_ring">#1FFFFFFF</color>
+    <color name="auth_background">#090608</color>
+    <color name="auth_surface">#090608</color>
+    <color name="auth_shell_outer">#060405</color>
+    <color name="auth_foreground">#F8F3F5</color>
+    <color name="auth_card">#161014</color>
+    <color name="auth_muted_foreground">#9E8C93</color>
+    <color name="auth_brand">#C8234B</color>
+    <color name="auth_brand_bright">#FF4772</color>
+    <color name="auth_brand_deep">#5A0D21</color>
+    <color name="auth_brand_soft">#2EC8234B</color>
+    <color name="auth_brand_ring">#80E63963</color>
+    <color name="auth_primary_foreground">#FFFFFF</color>
+    <color name="auth_input_ring">#45232E</color>
+    <color name="auth_input_ring_focus">#CCF0436E</color>
+    <color name="auth_shell_ring">#3D1E28</color>
 
-    <color name="streak">#E67E22</color>
-    <color name="streak_soft">#3B2816</color>
-    <color name="xp_track">#374151</color>
-    <color name="progress_xp_card_bg">#111827</color>
+    <color name="streak">#FF5C7C</color>
+    <color name="streak_soft">#26FF5C7C</color>
+    <color name="xp_track">#2A1820</color>
+    <color name="progress_xp_card_bg">#240B14</color>
+
+    <color name="theme_default_bg">#090608</color>
+    <color name="theme_night_bg">#050407</color>
+    <color name="theme_pastel_bg">#160A11</color>
 </resources>
-

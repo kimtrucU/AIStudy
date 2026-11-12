@@ -16,145 +16,121 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingHorizontal="@dimen/auth_screen_padding_horizontal"
-            android:paddingTop="@dimen/auth_screen_padding_vertical"
-            android:paddingBottom="@dimen/auth_screen_padding_vertical">
+            android:paddingHorizontal="28dp"
+            android:paddingTop="44dp"
+            android:paddingBottom="36dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Glowing 3D Crimson Orb -->
+            <FrameLayout
+                android:layout_width="156dp"
+                android:layout_height="156dp"
+                android:background="@drawable/bg_orb_outer_glow">
+
+                <ImageView
+                    android:layout_width="116dp"
+                    android:layout_height="116dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_crimson_orb" />
+            </FrameLayout>
+
+            <!-- App Title & Subtitle -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/auth_header_margin_bottom"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <FrameLayout
-                    android:layout_width="@dimen/auth_brand_icon_size"
-                    android:layout_height="@dimen/auth_brand_icon_size"
-                    android:background="@drawable/bg_auth_brand_icon">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="@null"
-                        android:importantForAccessibility="no"
-                        android:src="@drawable/ic_sparkles" />
-                </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/auth_header_gap"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/auth_app_title"
-                        android:textColor="@color/auth_foreground"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/auth_app_subtitle"
-                        android:textColor="@color/auth_muted_foreground"
-                        android:textSize="11sp" />
-                </LinearLayout>
-            </LinearLayout>
+                android:layout_marginTop="12dp"
+                android:fontFamily="sans-serif-light"
+                android:gravity="center"
+                android:letterSpacing="0.02"
+                android:text="@string/auth_app_title"
+                android:textColor="@color/auth_foreground"
+                android:textSize="30sp" />
 
             <TextView
-                android:id="@+id/tv_auth_title"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="@string/auth_app_subtitle"
+                android:textColor="@color/auth_muted_foreground"
+                android:textSize="14sp" />
+
+            <!-- Section Heading: Sign in -->
+            <TextView
+                android:id="@+id/tv_auth_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:gravity="center"
                 android:text="@string/auth_login_title"
                 android:textColor="@color/auth_foreground"
-                android:textSize="24sp"
+                android:textSize="26sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_auth_subtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/auth_title_margin_top"
+                android:gravity="center"
                 android:text="@string/auth_login_subtitle"
                 android:textColor="@color/auth_muted_foreground"
-                android:textSize="14sp" />
+                android:textSize="12sp"
+                android:visibility="gone" />
 
+            <!-- Form -->
             <LinearLayout
                 android:id="@+id/layout_auth_form"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/auth_form_margin_top"
+                android:layout_marginTop="26dp"
                 android:orientation="vertical">
 
-                <LinearLayout
+                <EditText
+                    android:id="@+id/edit_email"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_height="54dp"
+                    android:autofillHints="emailAddress"
+                    android:background="@drawable/bg_auth_input"
+                    android:hint="@string/auth_label_email"
+                    android:importantForAutofill="yes"
+                    android:inputType="textEmailAddress"
+                    android:paddingHorizontal="18dp"
+                    android:textColor="@color/auth_foreground"
+                    android:textColorHint="@color/auth_muted_foreground"
+                    android:textSize="15sp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/auth_label_email"
-                        android:textColor="@color/auth_muted_foreground"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <EditText
-                        android:id="@+id/edit_email"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/auth_input_height"
-                        android:layout_marginTop="@dimen/auth_label_input_spacing"
-                        android:autofillHints="emailAddress"
-                        android:background="@drawable/bg_auth_input"
-                        android:hint="@string/auth_hint_email"
-                        android:importantForAutofill="yes"
-                        android:inputType="textEmailAddress"
-                        android:paddingHorizontal="@dimen/auth_input_padding_horizontal"
-                        android:textColor="@color/auth_foreground"
-                        android:textColorHint="@color/auth_muted_foreground"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <LinearLayout
+                <EditText
+                    android:id="@+id/edit_password"
                     android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="14dp"
+                    android:autofillHints="password"
+                    android:background="@drawable/bg_auth_input"
+                    android:hint="@string/auth_label_password"
+                    android:importantForAutofill="yes"
+                    android:inputType="textPassword"
+                    android:paddingHorizontal="18dp"
+                    android:textColor="@color/auth_foreground"
+                    android:textColorHint="@color/auth_muted_foreground"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/auth_field_spacing"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/auth_label_password"
-                        android:textColor="@color/auth_muted_foreground"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <EditText
-                        android:id="@+id/edit_password"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/auth_input_height"
-                        android:layout_marginTop="@dimen/auth_label_input_spacing"
-                        android:autofillHints="password"
-                        android:background="@drawable/bg_auth_input"
-                        android:hint="@string/auth_hint_password"
-                        android:importantForAutofill="yes"
-                        android:inputType="textPassword"
-                        android:paddingHorizontal="@dimen/auth_input_padding_horizontal"
-                        android:textColor="@color/auth_foreground"
-                        android:textColorHint="@color/auth_muted_foreground"
-                        android:textSize="14sp" />
-                </LinearLayout>
+                    android:layout_gravity="end"
+                    android:layout_marginTop="12dp"
+                    android:text="Forgot password?"
+                    android:textColor="#A83856"
+                    android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_submit"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/auth_input_height"
-                    android:layout_marginTop="@dimen/auth_field_spacing"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="24dp"
                     android:background="@drawable/bg_auth_button"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
@@ -162,23 +138,46 @@
                     android:text="@string/auth_login_submit"
                     android:textAllCaps="false"
                     android:textColor="@color/auth_primary_foreground"
-                    android:textSize="14sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     app:backgroundTint="@null"
-                    app:cornerRadius="@dimen/auth_input_radius"
+                    app:cornerRadius="999dp"
                     app:rippleColor="#33FFFFFF"
                     tools:ignore="UnusedAttribute" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/btn_toggle_mode"
+            <View
                 android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Bottom Toggle -->
+            <LinearLayout
+                android:id="@+id/btn_toggle_mode"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/auth_toggle_margin_top"
+                android:layout_marginTop="32dp"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center"
-                android:text="@string/auth_login_toggle"
-                android:textColor="@color/auth_muted_foreground"
-                android:textSize="12sp" />
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Don’t have an account? "
+                    android:textColor="@color/auth_muted_foreground"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign up"
+                    android:textColor="@color/auth_brand_bright"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </FrameLayout>

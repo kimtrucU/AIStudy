@@ -1,8 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.AIStudy" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.AIStudy" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/auth_brand</item>
         <item name="colorOnPrimary">@color/auth_primary_foreground</item>
+        <item name="android:windowBackground">@color/auth_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/auth_background</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style name="Theme.AIStudy" parent="Base.Theme.AIStudy" />
