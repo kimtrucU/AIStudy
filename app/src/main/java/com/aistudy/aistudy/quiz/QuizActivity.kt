@@ -36,7 +36,7 @@ import java.util.concurrent.Executors
 class QuizActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_SUBJECT = "extra_subject"
+        const val EXTRA_SUBJECT = "subject"
 
         private const val MIN_SOURCE_QA = 2
         private const val RECENT_LIMIT = 5

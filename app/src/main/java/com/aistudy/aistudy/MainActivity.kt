@@ -9,11 +9,8 @@ import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -29,7 +26,6 @@ import com.aistudy.aistudy.onboarding.OnboardingActivity
 import com.aistudy.aistudy.progress.ProgressFragment
 import com.aistudy.aistudy.xp.FriendSeeder
 import com.aistudy.aistudy.xp.UnlockCatalog
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -58,8 +54,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val userDao = AppDatabase.getInstance(this).userDao()
-        val user = userDao.getById(userId) ?: userDao.findById(userId)
+        val user = AppDatabase.getInstance(this).userDao().getById(userId)
         if (user == null) {
             prefs.edit().remove(LoginActivity.KEY_USER_ID).apply()
             startActivity(Intent(this, LoginActivity::class.java))
@@ -76,26 +71,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         FriendSeeder.ensureSeeded(AppDatabase.getInstance(this).friendDao(), userId)
-        syncNightMode(profile?.themeId)
 
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        applyThemeBackground(profile?.themeId)
-
-        val toolbar: MaterialToolbar = findViewById(R.id.toolbar)
-        toolbar.setOnMenuItemClickListener { item ->
-            if (item.itemId == R.id.action_logout) {
-                showLogoutConfirmationDialog()
-                true
-            } else {
-                false
-            }
+        if (profile != null) {
+            findViewById<View>(R.id.main).setBackgroundResource(
+                UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(profile.themeId))
+            )
         }
 
         bottomNav = findViewById(R.id.bottom_nav)
@@ -159,49 +147,5 @@ class MainActivity : AppCompatActivity() {
             return
         }
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-    }
-
-    fun applyTheme(themeId: String?) {
-        applyThemeBackground(themeId)
-        syncNightMode(themeId)
-    }
-
-    private fun applyThemeBackground(themeId: String?) {
-        findViewById<View>(R.id.main)?.setBackgroundResource(
-            UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(themeId))
-        )
-    }
-
-    private fun syncNightMode(themeId: String?) {
-        val desiredMode = if (UnlockCatalog.normalizeThemeId(themeId) == UnlockCatalog.THEME_NIGHT) {
-            AppCompatDelegate.MODE_NIGHT_YES
-        } else {
-            AppCompatDelegate.MODE_NIGHT_NO
-        }
-        if (AppCompatDelegate.getDefaultNightMode() != desiredMode) {
-            AppCompatDelegate.setDefaultNightMode(desiredMode)
-        }
-    }
-
-    fun showLogoutConfirmationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.auth_logout_confirm_title)
-            .setMessage(R.string.auth_logout_confirm_message)
-            .setPositiveButton(R.string.auth_logout) { _, _ ->
-                logout()
-            }
-            .setNegativeButton(R.string.action_cancel, null)
-            .show()
-    }
-
-    fun logout() {
-        getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE).edit {
-            remove(LoginActivity.KEY_USER_ID)
-        }
-
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
     }
 }

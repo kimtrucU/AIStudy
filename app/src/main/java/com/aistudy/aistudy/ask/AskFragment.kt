@@ -410,6 +410,7 @@ class AskFragment : Fragment() {
                 qa.difficulty = difficulty
                 qa.extrasJson = null
                 qa.reviewedAt = 0
+                qa.reviewedSeconds = 0
                 qa.imagePath = imagePath
 
                 val qaId = qaDao.insert(qa)
