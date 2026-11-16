@@ -27,4 +27,6 @@
     <color name="theme_default_bg">#090608</color>
     <color name="theme_night_bg">#050407</color>
     <color name="theme_pastel_bg">#160A11</color>
+    <color name="nav_item_active">#FF597D</color>
+    <color name="nav_item_inactive">#B8A6AD</color>
 </resources>

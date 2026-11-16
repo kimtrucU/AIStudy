@@ -20,7 +20,6 @@ import com.aistudy.aistudy.database.QuestionAnswerDao
 import com.aistudy.aistudy.quiz.QuizActivity
 import com.aistudy.aistudy.xp.UnlockCatalog
 import com.aistudy.aistudy.xp.XpRules
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 
 class HomeFragment : Fragment() {
@@ -246,7 +245,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun selectTab(menuItemId: Int) {
-        (activity as? MainActivity)?.findViewById<BottomNavigationView>(R.id.bottom_nav)?.selectedItemId = menuItemId
+        (activity as? MainActivity)?.selectTab(menuItemId)
     }
 
     private fun subjectLabel(subject: String?): String {
