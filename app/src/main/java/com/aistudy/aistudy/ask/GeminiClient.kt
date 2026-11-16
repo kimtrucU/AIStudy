@@ -12,14 +12,12 @@ import java.nio.charset.StandardCharsets
 object GeminiClient {
 
     private const val TAG = "GeminiClient"
-
-    // Verified against the configured API key: gemini-2.x models now return HTTP 404,
-    // so only models that are currently served are listed here (in priority order).
-    private val MODELS = listOf(
-        "gemini-3.5-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite",
+    private const val MODEL = "gemini-3.8-flash"
+    private val FALLBACK_MODELS = listOf(
+        "gemini-flash-latest",
         "gemini-flash-lite-latest",
+        "gemini-2.5-pro",
+        "gemini-pro-latest"
     )
 
     fun ask(apiKey: String, prompt: String): String {
@@ -27,22 +25,20 @@ object GeminiClient {
     }
 
     fun ask(apiKey: String, prompt: String, imageBase64: String?, mimeType: String?): String {
+        val modelsToTry = listOf(MODEL) + FALLBACK_MODELS
         var lastException: Exception? = null
-        for (modelName in MODELS) {
+        for (modelName in modelsToTry) {
             try {
-                val text = requestModel(modelName, apiKey, prompt, imageBase64, mimeType)
-                if (text.isNotBlank()) {
-                    return text
-                }
-                Log.w(TAG, "Model $modelName returned empty text, trying next model...")
+                return requestModel(modelName, apiKey, prompt, imageBase64, mimeType)
             } catch (e: Exception) {
                 lastException = e
-                Log.w(TAG, "Model $modelName failed: ${truncate(e.message, 200)}; trying next model...")
+                val msg = e.message ?: ""
+                Log.w(TAG, "Model $modelName failed: ${truncate(msg, 120)}, trying fallback...")
             }
         }
         Log.w(
             TAG,
-            "All live Gemini models failed (${truncate(lastException?.message, 200)}); using built-in fallback"
+            "All live Gemini models failed (${lastException?.message}); using built-in study tutor fallback"
         )
         return buildLocalFallbackResponse(prompt)
     }
@@ -56,12 +52,11 @@ object GeminiClient {
     ): String {
         val hasImage = !imageBase64.isNullOrEmpty()
         Log.d(TAG, "request start model=$modelName promptLength=${prompt.length} hasImage=$hasImage")
-        val urlString = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent"
+        val urlString = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
         val url = URL(urlString)
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/json")
-        conn.setRequestProperty("x-goog-api-key", apiKey)
         conn.doOutput = true
         conn.connectTimeout = 30000
         conn.readTimeout = 90000
@@ -83,14 +78,10 @@ object GeminiClient {
         }
 
         val content = JSONObject()
-        content.put("role", "user")
         content.put("parts", parts)
 
         val body = JSONObject()
         body.put("contents", JSONArray().put(content))
-        if (prompt.contains("Return ONLY valid JSON")) {
-            body.put("generationConfig", JSONObject().put("responseMimeType", "application/json"))
-        }
 
         try {
             val bytes = body.toString().toByteArray(StandardCharsets.UTF_8)
@@ -115,15 +106,16 @@ object GeminiClient {
 
             Log.d(TAG, "response body length=${responseBody.length}")
             val json = JSONObject(responseBody)
-            val responseParts = json.getJSONArray("candidates")
+            val parts = json.getJSONArray("candidates")
                 .getJSONObject(0)
                 .getJSONObject("content")
                 .getJSONArray("parts")
-            val sb = StringBuilder()
-            for (i in 0 until responseParts.length()) {
-                val part = responseParts.getJSONObject(i)
-                if (part.optBoolean("thought", false)) continue
-                sb.append(part.optString("text", ""))
+            val sb = java.lang.StringBuilder()
+            for (i in 0 until parts.length()) {
+                val part = parts.getJSONObject(i)
+                if (part.has("text")) {
+                    sb.append(part.getString("text"))
+                }
             }
             val text = sb.toString()
             Log.d(TAG, "parsed text length=${text.length} preview=${truncate(text, 200)}")
