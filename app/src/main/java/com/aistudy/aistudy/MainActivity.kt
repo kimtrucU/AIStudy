@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -58,6 +59,18 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        try {
+            val userDao = AppDatabase.getInstance(this).userDao()
+            val user = userDao.findById(userId)
+            if (user == null) {
+                prefs.edit { remove(LoginActivity.KEY_USER_ID) }
+                navigateToLogin()
+                return
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            prefs.edit { remove(LoginActivity.KEY_USER_ID) }
+            navigateToLogin()
         val userDao = AppDatabase.getInstance(this).userDao()
         val user = userDao.getById(userId) ?: userDao.findById(userId)
         if (user == null) {

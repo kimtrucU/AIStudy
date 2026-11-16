@@ -13,9 +13,12 @@ import androidx.room.RoomDatabase
         QuizSession::class,
         QuizItem::class,
         Friend::class
+        User::class,
     ],
     version = 10,
     exportSchema = false
+    version = 1,
+    exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -44,7 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "aistudy.db"
                 )
                     .allowMainThreadQueries()
-                    .fallbackToDestructiveMigration(true)
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { instance = it }
             }

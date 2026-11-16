@@ -96,7 +96,7 @@ class RegisterActivity : AppCompatActivity() {
             }
             startActivity(intent)
             finish()
-        } catch (e: SQLiteConstraintException) {
+        } catch (_: SQLiteConstraintException) {
             Toast.makeText(this, R.string.auth_error_email_taken, Toast.LENGTH_SHORT).show()
         }
     }
