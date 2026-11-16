@@ -9,12 +9,15 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -34,6 +37,9 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
+        }
+        if (AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_NO) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         }
         enableEdgeToEdge()
         setContentView(R.layout.auth_activity_login)
@@ -76,11 +82,30 @@ class LoginActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
             return
         }
+        if (user == null || !PasswordHasher.matches(password, user.password)) {
+            Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
+            return
+        }
 
         getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).edit {
             putLong(KEY_USER_ID, user.id)
         }
+        getSharedPreferences(PREFS_AUTH, MODE_PRIVATE)
+            .edit()
+            .putLong(KEY_USER_ID, user.id)
+            .apply()
 
+        ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), user.id)
+
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, R.string.auth_error_unknown, Toast.LENGTH_SHORT).show()
+        }
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
