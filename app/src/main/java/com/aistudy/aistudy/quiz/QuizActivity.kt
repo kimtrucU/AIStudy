@@ -36,7 +36,7 @@ import java.util.concurrent.Executors
 class QuizActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_SUBJECT = "extra_subject"
+        const val EXTRA_SUBJECT = "subject"
 
         private const val MIN_SOURCE_QA = 2
         private const val RECENT_LIMIT = 5
@@ -79,7 +79,13 @@ class QuizActivity : AppCompatActivity() {
         setContentView(R.layout.activity_quiz)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            v.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                maxOf(systemBars.bottom, ime.bottom)
+            )
             insets
         }
 

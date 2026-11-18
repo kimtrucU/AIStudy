@@ -16,11 +16,9 @@
     <string name="progress_badge_starter">Starter</string>
     <string name="progress_badge_stars">5 stars</string>
     <string name="progress_badge_streak">3-day streak</string>
-    <string name="progress_badge_perfect" formatted="false">Quiz 100%</string>
+    <string name="progress_badge_perfect">Quiz 100%%</string>
     <string name="progress_badge_mastery">Subject mastery</string>
     <string name="progress_badge_scholar">Scholar 1k</string>
-    <string name="progress_badge_week">7-day active</string>
-    <string name="progress_badge_math">Math Whiz</string>
     <string name="progress_metrics_title">Learning metrics</string>
     <string name="progress_quiz_accuracy_label">Quiz accuracy</string>
     <string name="progress_quiz_accuracy_value">%1$d%% · %2$d/%3$d</string>
@@ -44,6 +42,5 @@
     <string name="progress_unlock_locked">Lv %d</string>
     <string name="progress_unlock_toast">Reach level %1$d to unlock</string>
     <string name="progress_theme_applied">Theme applied</string>
-    <string name="progress_check_reminders">Check learning reminders</string>
     <string name="progress_force_notify">Checking learning reminders…</string>
 </resources>

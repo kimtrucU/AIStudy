@@ -2,8 +2,8 @@ package com.aistudy.aistudy.progress
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -14,33 +14,26 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
-import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.auth.LoginActivity
 import com.aistudy.aistudy.database.AppDatabase
-import com.aistudy.aistudy.database.Friend
 import com.aistudy.aistudy.database.FriendDao
 import com.aistudy.aistudy.database.Profile
 import com.aistudy.aistudy.database.ProfileDao
 import com.aistudy.aistudy.database.QuestionAnswerDao
 import com.aistudy.aistudy.database.QuizItemDao
-import com.aistudy.aistudy.database.QuizSessionDao
 import com.aistudy.aistudy.notify.NotificationScheduler
 import com.aistudy.aistudy.quiz.QuizActivity
 import com.aistudy.aistudy.xp.FriendSeeder
 import com.aistudy.aistudy.xp.UnlockCatalog
 import com.aistudy.aistudy.xp.XpRules
-import com.google.android.material.button.MaterialButton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 class ProgressFragment : Fragment() {
 
     companion object {
         private const val MIN_PRACTICE_QA = 2
+        private const val MASTERY_MIN = 5
         private const val DAY_MS = 24L * 60L * 60L * 1000L
         private const val WINDOW_MS = 30L * DAY_MS
         private val SUBJECTS = arrayOf(
@@ -48,20 +41,12 @@ class ProgressFragment : Fragment() {
         )
     }
 
-    private data class LeaderboardEntry(
-        val name: String,
-        val weeklyXp: Int,
-        val isYou: Boolean
-    )
-
-    private lateinit var tvAvatarBadge: TextView
     private lateinit var tvUserEmail: TextView
     private lateinit var btnLogout: TextView
     private lateinit var tvXpTotal: TextView
     private lateinit var tvLevel: TextView
-    private lateinit var progressXp: ProgressBar
     private lateinit var tvXpPercent: TextView
-
+    private lateinit var progressXp: ProgressBar
     private lateinit var tvStatStreak: TextView
     private lateinit var tvStatQuestions: TextView
     private lateinit var tvStatStars: TextView
@@ -74,30 +59,26 @@ class ProgressFragment : Fragment() {
     private lateinit var cardReviewSuggest: LinearLayout
     private lateinit var tvReviewSubtitle: TextView
 
-    private lateinit var layoutAvatars: LinearLayout
-    private lateinit var layoutThemes: LinearLayout
+    private lateinit var rowAvatars: LinearLayout
+    private lateinit var rowThemes: LinearLayout
     private lateinit var layoutLeaderboard: LinearLayout
 
-    private lateinit var tvSubjectsEmpty: TextView
     private lateinit var rowMath: LinearLayout
-    private lateinit var tvCountMath: TextView
-    private lateinit var barMath: ProgressBar
-
     private lateinit var rowScience: LinearLayout
-    private lateinit var tvCountScience: TextView
-    private lateinit var barScience: ProgressBar
-
     private lateinit var rowCode: LinearLayout
-    private lateinit var tvCountCode: TextView
-    private lateinit var barCode: ProgressBar
-
     private lateinit var rowHistory: LinearLayout
-    private lateinit var tvCountHistory: TextView
-    private lateinit var barHistory: ProgressBar
-
     private lateinit var rowLanguage: LinearLayout
+    private lateinit var tvCountMath: TextView
+    private lateinit var tvCountScience: TextView
+    private lateinit var tvCountCode: TextView
+    private lateinit var tvCountHistory: TextView
     private lateinit var tvCountLanguage: TextView
+    private lateinit var barMath: ProgressBar
+    private lateinit var barScience: ProgressBar
+    private lateinit var barCode: ProgressBar
+    private lateinit var barHistory: ProgressBar
     private lateinit var barLanguage: ProgressBar
+    private lateinit var tvSubjectsEmpty: TextView
 
     private lateinit var badgeStarter: LinearLayout
     private lateinit var badgeStars: LinearLayout
@@ -105,17 +86,14 @@ class ProgressFragment : Fragment() {
     private lateinit var badgePerfect: LinearLayout
     private lateinit var badgeMastery: LinearLayout
     private lateinit var badgeScholar: LinearLayout
-    private lateinit var badgeWeek: LinearLayout
-    private lateinit var badgeMath: LinearLayout
-    private lateinit var btnCheckReminders: MaterialButton
 
-    private var profileDao: ProfileDao? = null
     private var qaDao: QuestionAnswerDao? = null
-    private var quizItemDao: QuizItemDao? = null
-    private var quizSessionDao: QuizSessionDao? = null
+    private var profileDao: ProfileDao? = null
     private var friendDao: FriendDao? = null
-    private var userId: Long = -1L
+    private var currentUserId = -1L
     private var reviewSubject: String? = null
+    private var currentProfile: Profile? = null
+    private var currentLevel = 1
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -127,15 +105,12 @@ class ProgressFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        tvAvatarBadge = view.findViewById(R.id.tv_avatar_badge)
         tvUserEmail = view.findViewById(R.id.tv_user_email)
         btnLogout = view.findViewById(R.id.btn_logout)
         tvXpTotal = view.findViewById(R.id.tv_xp_total)
         tvLevel = view.findViewById(R.id.tv_level)
-        progressXp = view.findViewById(R.id.progress_xp)
         tvXpPercent = view.findViewById(R.id.tv_xp_percent)
-
+        progressXp = view.findViewById(R.id.progress_xp)
         tvStatStreak = view.findViewById(R.id.tv_stat_streak)
         tvStatQuestions = view.findViewById(R.id.tv_stat_questions)
         tvStatStars = view.findViewById(R.id.tv_stat_stars)
@@ -148,30 +123,26 @@ class ProgressFragment : Fragment() {
         cardReviewSuggest = view.findViewById(R.id.card_review_suggest)
         tvReviewSubtitle = view.findViewById(R.id.tv_review_subtitle)
 
-        layoutAvatars = view.findViewById(R.id.layout_avatars)
-        layoutThemes = view.findViewById(R.id.layout_themes)
+        rowAvatars = view.findViewById(R.id.row_avatars)
+        rowThemes = view.findViewById(R.id.row_themes)
         layoutLeaderboard = view.findViewById(R.id.layout_leaderboard)
 
-        tvSubjectsEmpty = view.findViewById(R.id.tv_subjects_empty)
         rowMath = view.findViewById(R.id.row_math)
-        tvCountMath = view.findViewById(R.id.tv_count_math)
-        barMath = view.findViewById(R.id.bar_math)
-
         rowScience = view.findViewById(R.id.row_science)
-        tvCountScience = view.findViewById(R.id.tv_count_science)
-        barScience = view.findViewById(R.id.bar_science)
-
         rowCode = view.findViewById(R.id.row_code)
-        tvCountCode = view.findViewById(R.id.tv_count_code)
-        barCode = view.findViewById(R.id.bar_code)
-
         rowHistory = view.findViewById(R.id.row_history)
-        tvCountHistory = view.findViewById(R.id.tv_count_history)
-        barHistory = view.findViewById(R.id.bar_history)
-
         rowLanguage = view.findViewById(R.id.row_language)
+        tvCountMath = view.findViewById(R.id.tv_count_math)
+        tvCountScience = view.findViewById(R.id.tv_count_science)
+        tvCountCode = view.findViewById(R.id.tv_count_code)
+        tvCountHistory = view.findViewById(R.id.tv_count_history)
         tvCountLanguage = view.findViewById(R.id.tv_count_language)
+        barMath = view.findViewById(R.id.bar_math)
+        barScience = view.findViewById(R.id.bar_science)
+        barCode = view.findViewById(R.id.bar_code)
+        barHistory = view.findViewById(R.id.bar_history)
         barLanguage = view.findViewById(R.id.bar_language)
+        tvSubjectsEmpty = view.findViewById(R.id.tv_subjects_empty)
 
         badgeStarter = view.findViewById(R.id.badge_starter)
         badgeStars = view.findViewById(R.id.badge_stars)
@@ -179,37 +150,21 @@ class ProgressFragment : Fragment() {
         badgePerfect = view.findViewById(R.id.badge_perfect)
         badgeMastery = view.findViewById(R.id.badge_mastery)
         badgeScholar = view.findViewById(R.id.badge_scholar)
-        badgeWeek = view.findViewById(R.id.badge_week)
-        badgeMath = view.findViewById(R.id.badge_math)
-        btnCheckReminders = view.findViewById(R.id.btn_check_reminders)
-
-        val db = AppDatabase.getInstance(requireContext())
-        profileDao = db.profileDao()
-        qaDao = db.questionAnswerDao()
-        quizItemDao = db.quizItemDao()
-        quizSessionDao = db.quizSessionDao()
-        friendDao = db.friendDao()
-
-        userId = requireContext()
-            .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
-            .getLong(LoginActivity.KEY_USER_ID, -1L)
 
         btnLogout.setOnClickListener { logout() }
+        view.findViewById<View>(R.id.tv_progress_title).setOnLongClickListener {
+            NotificationScheduler.enqueueNow(requireContext())
+            Toast.makeText(requireContext(), R.string.progress_force_notify, Toast.LENGTH_SHORT).show()
+            true
+        }
         cardReviewSuggest.setOnClickListener {
             reviewSubject?.let { openPractice(it) }
-        }
-        btnCheckReminders.setOnClickListener {
-            val ctx = context ?: return@setOnClickListener
-            NotificationScheduler.enqueueNow(ctx)
-            Toast.makeText(ctx, R.string.progress_force_notify, Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        if (userId != -1L) {
-            loadProgress()
-        }
+        loadProgress()
     }
 
     private fun logout() {
@@ -228,314 +183,288 @@ class ProgressFragment : Fragment() {
     }
 
     private fun loadProgress() {
-        val ctx = context ?: return
-        val db = AppDatabase.getInstance(ctx)
+        if (context == null) {
+            return
+        }
 
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val pDao = profileDao ?: return@launch
-            val qDao = qaDao ?: return@launch
-            val qiDao = quizItemDao ?: return@launch
-            val qsDao = quizSessionDao ?: return@launch
-            val fDao = friendDao ?: return@launch
+        val userId = requireContext()
+            .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
+            .getLong(LoginActivity.KEY_USER_ID, -1L)
+        if (userId == -1L) {
+            return
+        }
 
-            val user = db.userDao().getById(userId)
-            val profile = pDao.getByUserId(userId) ?: return@launch
+        val db = AppDatabase.getInstance(requireContext())
+        val user = db.userDao().getById(userId)
+        tvUserEmail.text = user?.email ?: ""
+
+        val profileDao = db.profileDao()
+        this.profileDao = profileDao
+        val profile = profileDao.getByUserId(userId)
+        if (profile != null) {
             XpRules.ensureWeek(profile)
-            FriendSeeder.ensureSeeded(fDao, userId)
-
-            val xp = profile.xp
-            val streak = profile.streak
-            val level = XpRules.levelFromXp(xp)
-            val percent = XpRules.progressPercentToNext(xp)
-
-            val allItems = qDao.getAllByUserId(userId)
-            val totalQuestions = allItems.size
-            val starredCount = allItems.count { it.starred }
-
-            val attempted = qiDao.countAttemptedByUserId(userId)
-            val correct = qiDao.countCorrectByUserId(userId)
-            val reviewSeconds = qDao.sumReviewedSecondsByUserId(userId)
-            val perfectQuizzes = qsDao.countPerfectByUserId(userId)
-
-            val topSubject = qDao.getTopSubjectByUserId(userId)
-            val topSubjectCount = if (topSubject != null) qDao.countBySubject(userId, topSubject) else 0
-            val improvedSubject = findImprovedSubject(qiDao, userId)
-
-            val countMath = qDao.countBySubject(userId, "math")
-            val countScience = qDao.countBySubject(userId, "science")
-            val countCode = qDao.countBySubject(userId, "code")
-            val countHistory = qDao.countBySubject(userId, "history")
-            val countLanguage = qDao.countBySubject(userId, "language")
-            val subjectTotal = countMath + countScience + countCode + countHistory + countLanguage
-            val maxSubjectCount = maxOf(countMath, countScience, countCode, countHistory, countLanguage)
-
-            val friends: List<Friend> = fDao.getByOwner(userId)
-
-            withContext(Dispatchers.Main) {
-                if (!isAdded || view == null) {
-                    return@withContext
-                }
-
-                tvUserEmail.text = user?.email ?: ""
-                val avatarId = UnlockCatalog.normalizeAvatarId(profile.avatarId)
-                tvAvatarBadge.text = UnlockCatalog.emojiForAvatar(avatarId)
-
-                tvXpTotal.text = xp.toString()
-                tvLevel.text = getString(R.string.progress_level_scholar, level)
-                progressXp.progress = percent
-                tvXpPercent.text = getString(R.string.progress_xp_percent, percent)
-
-                tvStatStreak.text = getString(R.string.progress_streak_value, streak)
-                tvStatQuestions.text = totalQuestions.toString()
-                tvStatStars.text = starredCount.toString()
-
-                if (attempted > 0) {
-                    val accuracyPct = ((correct * 100f) / attempted).roundToInt()
-                    tvQuizAccuracy.text = getString(
-                        R.string.progress_quiz_accuracy_value, accuracyPct, correct, attempted
-                    )
-                } else {
-                    tvQuizAccuracy.setText(R.string.progress_quiz_accuracy_empty)
-                }
-                tvReviewTime.text = formatReviewTime(reviewSeconds)
-
-                bindInsights(topSubject, topSubjectCount, improvedSubject)
-
-                if (topSubject != null && topSubjectCount >= MIN_PRACTICE_QA) {
-                    reviewSubject = topSubject
-                    tvReviewSubtitle.text = getString(R.string.progress_review_subtitle, subjectLabel(topSubject))
-                    cardReviewSuggest.visibility = View.VISIBLE
-                } else {
-                    reviewSubject = null
-                    cardReviewSuggest.visibility = View.GONE
-                }
-
-                bindAvatars(profile, pDao, level)
-                bindThemes(profile, pDao, level)
-                bindLeaderboard(friends, profile.weeklyXp)
-
-                if (subjectTotal == 0) {
-                    tvSubjectsEmpty.visibility = View.VISIBLE
-                    rowMath.visibility = View.GONE
-                    rowScience.visibility = View.GONE
-                    rowCode.visibility = View.GONE
-                    rowHistory.visibility = View.GONE
-                    rowLanguage.visibility = View.GONE
-                } else {
-                    tvSubjectsEmpty.visibility = View.GONE
-                    val barDenom = maxOf(1, subjectTotal)
-                    bindSubjectRow(rowMath, tvCountMath, barMath, countMath, barDenom)
-                    bindSubjectRow(rowScience, tvCountScience, barScience, countScience, barDenom)
-                    bindSubjectRow(rowCode, tvCountCode, barCode, countCode, barDenom)
-                    bindSubjectRow(rowHistory, tvCountHistory, barHistory, countHistory, barDenom)
-                    bindSubjectRow(rowLanguage, tvCountLanguage, barLanguage, countLanguage, barDenom)
-                }
-
-                setBadge(badgeStarter, totalQuestions >= 1)
-                setBadge(badgeStars, starredCount >= 5)
-                setBadge(badgeStreak, streak >= 3)
-                setBadge(badgePerfect, perfectQuizzes >= 1)
-                setBadge(badgeMastery, maxSubjectCount >= 5)
-                setBadge(badgeScholar, xp >= 1000)
-                setBadge(badgeWeek, streak >= 7)
-                setBadge(badgeMath, countMath >= 1)
+            if (profile.avatarId.isNullOrEmpty()) {
+                profile.avatarId = UnlockCatalog.AVATAR_FOX
             }
+            if (profile.themeId.isNullOrEmpty()) {
+                profile.themeId = UnlockCatalog.THEME_DEFAULT
+            }
+            profileDao.update(profile)
+        }
+        currentProfile = profile
+        val qaDao = db.questionAnswerDao()
+        this.qaDao = qaDao
+        val friendDao = db.friendDao()
+        this.friendDao = friendDao
+        val quizItemDao = db.quizItemDao()
+        val sessionDao = db.quizSessionDao()
+        currentUserId = userId
+        FriendSeeder.ensureSeeded(friendDao, userId)
+
+        val all = qaDao.getAllByUserId(userId)
+
+        val xp = profile?.xp ?: 0
+        val streak = profile?.streak ?: 0
+        currentLevel = XpRules.levelFromXp(xp)
+        val xpPct = XpRules.progressPercentToNext(xp)
+        val totalQuestions = all.size
+        val starredCount = qaDao.countStarredByUserId(userId)
+
+        tvXpTotal.text = xp.toString()
+        tvLevel.text = getString(R.string.progress_level_scholar, currentLevel)
+        tvXpPercent.text = getString(R.string.progress_xp_percent, xpPct)
+        progressXp.progress = xpPct
+        tvStatStreak.text = getString(R.string.progress_streak_value, streak)
+        tvStatQuestions.text = totalQuestions.toString()
+        tvStatStars.text = starredCount.toString()
+
+        val attempted = quizItemDao.countAttemptedByUserId(userId)
+        val correct = quizItemDao.countCorrectByUserId(userId)
+        if (attempted > 0) {
+            val accuracyPct = ((correct * 100f) / attempted).roundToInt()
+            tvQuizAccuracy.text = getString(
+                R.string.progress_quiz_accuracy_value, accuracyPct, correct, attempted
+            )
+        } else {
+            tvQuizAccuracy.setText(R.string.progress_quiz_accuracy_empty)
+        }
+
+        val reviewSeconds = qaDao.sumReviewedSecondsByUserId(userId)
+        tvReviewTime.text = formatReviewTime(reviewSeconds)
+
+        bindInsights(qaDao, quizItemDao, userId)
+        bindReviewSuggest(qaDao, userId)
+        bindAvatars()
+        bindThemes()
+        bindLeaderboard(user?.fullName)
+
+        val countMath = qaDao.countBySubject(userId, "math")
+        val countScience = qaDao.countBySubject(userId, "science")
+        val countCode = qaDao.countBySubject(userId, "code")
+        val countHistory = qaDao.countBySubject(userId, "history")
+        val countLanguage = qaDao.countBySubject(userId, "language")
+        val subjectTotal = countMath + countScience + countCode + countHistory + countLanguage
+        val barDenom = if (subjectTotal > 0) subjectTotal else 1
+
+        bindSubjectRow(rowMath, tvCountMath, barMath, countMath, barDenom)
+        bindSubjectRow(rowScience, tvCountScience, barScience, countScience, barDenom)
+        bindSubjectRow(rowCode, tvCountCode, barCode, countCode, barDenom)
+        bindSubjectRow(rowHistory, tvCountHistory, barHistory, countHistory, barDenom)
+        bindSubjectRow(rowLanguage, tvCountLanguage, barLanguage, countLanguage, barDenom)
+        tvSubjectsEmpty.visibility = if (subjectTotal == 0) View.VISIBLE else View.GONE
+
+        val maxSubjectCount = maxOf(countMath, countScience, countCode, countHistory, countLanguage)
+        val perfectCount = sessionDao.countPerfectByUserId(userId)
+
+        setBadge(badgeStarter, totalQuestions >= 1)
+        setBadge(badgeStars, starredCount >= 5)
+        setBadge(badgeStreak, streak >= 3)
+        setBadge(badgePerfect, perfectCount >= 1)
+        setBadge(badgeMastery, maxSubjectCount >= MASTERY_MIN)
+        setBadge(badgeScholar, xp >= 1000)
+
+        applyThemeBackground()
+    }
+
+    private fun bindAvatars() {
+        rowAvatars.removeAllViews()
+        val profile = currentProfile
+        if (context == null || profile == null) {
+            return
+        }
+        val selected = UnlockCatalog.normalizeAvatarId(profile.avatarId)
+        UnlockCatalog.AVATARS.forEachIndexed { i, avatarId ->
+            val unlocked = UnlockCatalog.isAvatarUnlocked(avatarId, currentLevel)
+            val isSelected = avatarId == selected
+            val chip = buildChip(
+                UnlockCatalog.emojiForAvatar(avatarId),
+                unlocked,
+                isSelected,
+                UnlockCatalog.requiredLevelForAvatar(avatarId),
+                i > 0
+            )
+            chip.setOnClickListener { onAvatarClicked(avatarId) }
+            rowAvatars.addView(chip)
         }
     }
 
-    private fun bindAvatars(profile: Profile, pDao: ProfileDao, level: Int) {
-        val ctx = context ?: return
-        layoutAvatars.removeAllViews()
-        val activeAvatar = UnlockCatalog.normalizeAvatarId(profile.avatarId)
-        val density = resources.displayMetrics.density
-
-        for ((index, avatarId) in UnlockCatalog.AVATARS.withIndex()) {
-            val unlocked = UnlockCatalog.isAvatarUnlocked(avatarId, level)
-            val selected = unlocked && avatarId == activeAvatar
-            val reqLevel = UnlockCatalog.requiredLevelForAvatar(avatarId)
-
-            val chip = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(
-                    (8 * density).roundToInt(),
-                    (10 * density).roundToInt(),
-                    (8 * density).roundToInt(),
-                    (10 * density).roundToInt()
-                )
-                setBackgroundResource(
-                    if (selected) R.drawable.bg_unlock_chip_selected else R.drawable.bg_unlock_chip
-                )
-                alpha = if (unlocked) 1f else 0.55f
-                isClickable = true
-                isFocusable = true
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                ).apply {
-                    if (index > 0) marginStart = (8 * density).roundToInt()
-                }
-            }
-
-            val tvEmoji = TextView(ctx).apply {
-                text = UnlockCatalog.emojiForAvatar(avatarId)
-                textSize = 22f
-                gravity = Gravity.CENTER
-            }
-            chip.addView(tvEmoji)
-
-            if (!unlocked) {
-                val tvLock = TextView(ctx).apply {
-                    text = getString(R.string.progress_unlock_locked, reqLevel)
-                    textSize = 10f
-                    setTextColor(ContextCompat.getColor(ctx, R.color.auth_muted_foreground))
-                    setTypeface(null, Typeface.BOLD)
-                    gravity = Gravity.CENTER
-                }
-                chip.addView(tvLock)
-            }
-
-            chip.setOnClickListener {
-                if (!unlocked) {
-                    Toast.makeText(
-                        ctx,
-                        getString(R.string.progress_unlock_toast, reqLevel),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
-                }
-                profile.avatarId = avatarId
-                pDao.update(profile)
-                tvAvatarBadge.text = UnlockCatalog.emojiForAvatar(avatarId)
-                bindAvatars(profile, pDao, level)
-            }
-
-            layoutAvatars.addView(chip)
+    private fun bindThemes() {
+        rowThemes.removeAllViews()
+        val profile = currentProfile
+        if (context == null || profile == null) {
+            return
+        }
+        val selected = UnlockCatalog.normalizeThemeId(profile.themeId)
+        UnlockCatalog.THEMES.forEachIndexed { i, themeId ->
+            val unlocked = UnlockCatalog.isThemeUnlocked(themeId, currentLevel)
+            val isSelected = themeId == selected
+            val chip = buildChip(
+                UnlockCatalog.labelForTheme(themeId),
+                unlocked,
+                isSelected,
+                UnlockCatalog.requiredLevelForTheme(themeId),
+                i > 0
+            )
+            chip.setOnClickListener { onThemeClicked(themeId) }
+            rowThemes.addView(chip)
         }
     }
 
-    private fun bindThemes(profile: Profile, pDao: ProfileDao, level: Int) {
-        val ctx = context ?: return
-        layoutThemes.removeAllViews()
-        val activeTheme = UnlockCatalog.normalizeThemeId(profile.themeId)
-        val density = resources.displayMetrics.density
-
-        for ((index, themeId) in UnlockCatalog.THEMES.withIndex()) {
-            val unlocked = UnlockCatalog.isThemeUnlocked(themeId, level)
-            val selected = unlocked && themeId == activeTheme
-            val reqLevel = UnlockCatalog.requiredLevelForTheme(themeId)
-
-            val chip = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(
-                    (10 * density).roundToInt(),
-                    (12 * density).roundToInt(),
-                    (10 * density).roundToInt(),
-                    (12 * density).roundToInt()
-                )
-                setBackgroundResource(
-                    if (selected) R.drawable.bg_unlock_chip_selected else R.drawable.bg_unlock_chip
-                )
-                alpha = if (unlocked) 1f else 0.55f
-                isClickable = true
-                isFocusable = true
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                ).apply {
-                    if (index > 0) marginStart = (8 * density).roundToInt()
-                }
-            }
-
-            val tvName = TextView(ctx).apply {
-                text = UnlockCatalog.labelForTheme(themeId)
-                textSize = 13f
-                setTypeface(null, Typeface.BOLD)
-                setTextColor(
-                    ContextCompat.getColor(
-                        ctx,
-                        if (selected) R.color.auth_brand else R.color.auth_foreground
-                    )
-                )
-                gravity = Gravity.CENTER
-            }
-            chip.addView(tvName)
-
-            if (!unlocked) {
-                val tvLock = TextView(ctx).apply {
-                    text = getString(R.string.progress_unlock_locked, reqLevel)
-                    textSize = 10f
-                    setTextColor(ContextCompat.getColor(ctx, R.color.auth_muted_foreground))
-                    gravity = Gravity.CENTER
-                }
-                chip.addView(tvLock)
-            }
-
-            chip.setOnClickListener {
-                if (!unlocked) {
-                    Toast.makeText(
-                        ctx,
-                        getString(R.string.progress_unlock_toast, reqLevel),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
-                }
-                profile.themeId = themeId
-                pDao.update(profile)
-                Toast.makeText(ctx, R.string.progress_theme_applied, Toast.LENGTH_SHORT).show()
-                bindThemes(profile, pDao, level)
-                (activity as? MainActivity)?.applyTheme(themeId)
-            }
-
-            layoutThemes.addView(chip)
+    private fun buildChip(
+        label: String,
+        unlocked: Boolean,
+        selected: Boolean,
+        requiredLevel: Int,
+        withStartMargin: Boolean
+    ): TextView {
+        val chip = TextView(requireContext())
+        val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        if (withStartMargin) {
+            lp.marginStart = dp(8)
         }
+        chip.layoutParams = lp
+        chip.gravity = Gravity.CENTER
+        chip.setPadding(dp(10), dp(12), dp(10), dp(12))
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        if (!unlocked) {
+            chip.text = getString(R.string.progress_unlock_locked, requiredLevel)
+            chip.alpha = 0.45f
+            chip.setBackgroundResource(R.drawable.bg_unlock_chip)
+            chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.auth_muted_foreground))
+        } else {
+            chip.text = label
+            chip.alpha = 1f
+            chip.setBackgroundResource(
+                if (selected) R.drawable.bg_unlock_chip_selected else R.drawable.bg_unlock_chip
+            )
+            chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.auth_foreground))
+        }
+        return chip
     }
 
-    private fun bindLeaderboard(friends: List<Friend>, myWeeklyXp: Int) {
-        val ctx = context ?: return
+    private fun onAvatarClicked(avatarId: String) {
+        val profile = currentProfile
+        val dao = profileDao
+        if (profile == null || dao == null) {
+            return
+        }
+        if (!UnlockCatalog.isAvatarUnlocked(avatarId, currentLevel)) {
+            Toast.makeText(
+                requireContext(),
+                getString(
+                    R.string.progress_unlock_toast,
+                    UnlockCatalog.requiredLevelForAvatar(avatarId)
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        profile.avatarId = avatarId
+        dao.update(profile)
+        bindAvatars()
+    }
+
+    private fun onThemeClicked(themeId: String) {
+        val profile = currentProfile
+        val dao = profileDao
+        if (profile == null || dao == null) {
+            return
+        }
+        if (!UnlockCatalog.isThemeUnlocked(themeId, currentLevel)) {
+            Toast.makeText(
+                requireContext(),
+                getString(
+                    R.string.progress_unlock_toast,
+                    UnlockCatalog.requiredLevelForTheme(themeId)
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        profile.themeId = themeId
+        dao.update(profile)
+        bindThemes()
+        applyThemeBackground()
+        activity?.findViewById<View>(R.id.main)?.setBackgroundResource(UnlockCatalog.backgroundColorRes(themeId))
+        Toast.makeText(requireContext(), R.string.progress_theme_applied, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun applyThemeBackground() {
+        val root = view
+        val profile = currentProfile
+        if (root == null || profile == null) {
+            return
+        }
+        val themeId = UnlockCatalog.normalizeThemeId(profile.themeId)
+        root.setBackgroundResource(UnlockCatalog.backgroundColorRes(themeId))
+    }
+
+    private fun bindLeaderboard(fullName: String?) {
         layoutLeaderboard.removeAllViews()
-
-        val entries = mutableListOf<LeaderboardEntry>()
-        for (f in friends) {
-            entries.add(LeaderboardEntry(f.displayName ?: "", f.weeklyXp, isYou = false))
+        val profile = currentProfile
+        val friendDao = friendDao
+        if (context == null || profile == null || friendDao == null) {
+            return
         }
-        entries.add(LeaderboardEntry(getString(R.string.progress_leaderboard_you), myWeeklyXp, isYou = true))
-        entries.sortWith(compareByDescending<LeaderboardEntry> { it.weeklyXp }.thenBy { !it.isYou })
+        XpRules.ensureWeek(profile)
+        profileDao?.update(profile)
 
-        val inflater = LayoutInflater.from(ctx)
-        for ((index, entry) in entries.withIndex()) {
-            val row = inflater.inflate(R.layout.item_leaderboard_row, layoutLeaderboard, false)
-            val tvRank = row.findViewById<TextView>(R.id.tv_rank)
-            val tvName = row.findViewById<TextView>(R.id.tv_name)
-            val tvWeeklyXp = row.findViewById<TextView>(R.id.tv_weekly_xp)
+        val rows = mutableListOf<LeaderboardRow>()
+        val youName = if (!fullName.isNullOrEmpty()) fullName else getString(R.string.progress_leaderboard_you)
+        rows.add(LeaderboardRow(youName, profile.weeklyXp, true))
 
-            tvRank.text = "#${index + 1}"
-            tvName.text = entry.name
-            tvWeeklyXp.text = getString(R.string.progress_leaderboard_xp, entry.weeklyXp)
+        for (friend in friendDao.getByOwner(currentUserId)) {
+            rows.add(LeaderboardRow(friend.displayName, friend.weeklyXp, false))
+        }
+        rows.sortByDescending { it.weeklyXp }
 
-            if (entry.isYou) {
-                row.setBackgroundResource(R.drawable.bg_unlock_chip_selected)
-                val brand = ContextCompat.getColor(ctx, R.color.auth_brand)
-                tvRank.setTextColor(brand)
-                tvName.setTextColor(brand)
+        val inflater = LayoutInflater.from(requireContext())
+        rows.forEachIndexed { i, row ->
+            val item = inflater.inflate(R.layout.item_leaderboard_row, layoutLeaderboard, false)
+            val tvRank = item.findViewById<TextView>(R.id.tv_rank)
+            val tvName = item.findViewById<TextView>(R.id.tv_name)
+            val tvWeeklyXp = item.findViewById<TextView>(R.id.tv_weekly_xp)
+            tvRank.text = (i + 1).toString()
+            tvName.text = if (row.isSelf) {
+                "${getString(R.string.progress_leaderboard_you)} (${row.name})"
+            } else {
+                row.name
             }
-            layoutLeaderboard.addView(row)
+            tvWeeklyXp.text = getString(R.string.progress_leaderboard_xp, row.weeklyXp)
+            if (row.isSelf) {
+                tvName.setTextColor(ContextCompat.getColor(requireContext(), R.color.auth_brand))
+            }
+            layoutLeaderboard.addView(item)
         }
     }
 
-    private fun bindInsights(
-        topSubject: String?,
-        topSubjectCount: Int,
-        improvedSubject: String?
-    ) {
+    private fun bindInsights(qaDao: QuestionAnswerDao, quizItemDao: QuizItemDao, userId: Long) {
         tvInsight1.visibility = View.GONE
         tvInsight2.visibility = View.GONE
 
         var shown = 0
-        if (topSubject != null && topSubjectCount >= 1) {
+        val topSubject = qaDao.getTopSubjectByUserId(userId)
+        if (topSubject != null && qaDao.countBySubject(userId, topSubject) >= 1) {
             tvInsight1.text = getString(
                 R.string.progress_insight_top_subject, subjectLabel(topSubject)
             )
@@ -543,6 +472,7 @@ class ProgressFragment : Fragment() {
             shown++
         }
 
+        val improvedSubject = findImprovedSubject(quizItemDao, userId)
         if (improvedSubject != null) {
             val target = if (shown == 0) tvInsight1 else tvInsight2
             target.text = getString(
@@ -590,18 +520,29 @@ class ProgressFragment : Fragment() {
         return bestSubject
     }
 
+    private fun bindReviewSuggest(qaDao: QuestionAnswerDao, userId: Long) {
+        val topSubject = qaDao.getTopSubjectByUserId(userId)
+        if (topSubject == null || qaDao.countBySubject(userId, topSubject) < MIN_PRACTICE_QA) {
+            reviewSubject = null
+            cardReviewSuggest.visibility = View.GONE
+            return
+        }
+        reviewSubject = topSubject
+        tvReviewSubtitle.text = getString(R.string.progress_review_subtitle, subjectLabel(topSubject))
+        cardReviewSuggest.visibility = View.VISIBLE
+    }
+
     private fun openPractice(subject: String) {
-        val ctx = context ?: return
-        val dao = qaDao ?: return
-        if (userId == -1L) {
+        val dao = qaDao
+        if (context == null || dao == null || currentUserId == -1L) {
             return
         }
-        val count = dao.countBySubject(userId, subject)
+        val count = dao.countBySubject(currentUserId, subject)
         if (count < MIN_PRACTICE_QA) {
-            Toast.makeText(ctx, R.string.quiz_need_more, Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), R.string.quiz_need_more, Toast.LENGTH_LONG).show()
             return
         }
-        val intent = Intent(ctx, QuizActivity::class.java)
+        val intent = Intent(requireContext(), QuizActivity::class.java)
         intent.putExtra(QuizActivity.EXTRA_SUBJECT, subject)
         startActivity(intent)
     }
@@ -649,4 +590,14 @@ class ProgressFragment : Fragment() {
             else -> getString(R.string.subject_other)
         }
     }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).roundToInt()
+    }
+
+    private class LeaderboardRow(
+        val name: String?,
+        val weeklyXp: Int,
+        val isSelf: Boolean
+    )
 }

@@ -1,7 +1,6 @@
 package com.aistudy.aistudy.answer
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.os.Bundle
@@ -41,12 +40,13 @@ class AnswerActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_QA_ID = "qa_id"
 
-        private const val XP_REVIEW = 10
         private const val KEY_SIMPLIFY = "simplify"
         private const val KEY_ALTERNATIVE = "alternative"
         private const val KEY_CONCEPTS = "concepts"
         private const val KEY_MISTAKES = "mistakes"
         private const val KEY_FOLLOWUPS = "followUps"
+
+        private const val MAX_SESSION_SECONDS = 1800
 
         private fun isSameDay(a: Long, b: Long): Boolean {
             val ca = Calendar.getInstance()
@@ -62,7 +62,6 @@ class AnswerActivity : AppCompatActivity() {
     private lateinit var profileDao: ProfileDao
     private var qa: QuestionAnswer? = null
     private var executor: ExecutorService? = null
-    private var openTimeMs: Long = 0
 
     private lateinit var tvDifficulty: TextView
     private lateinit var btnSimplify: TextView
@@ -76,6 +75,7 @@ class AnswerActivity : AppCompatActivity() {
 
     private var activeExtraKey: String? = null
     private var extrasLoading = false
+    private var reviewSessionStartMs: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,9 +87,7 @@ class AnswerActivity : AppCompatActivity() {
             insets
         }
 
-        openTimeMs = System.currentTimeMillis()
-
-        val qaId = intent.getLongExtra(EXTRA_QA_ID, -1L)
+        val qaId = intent.getLongExtra(EXTRA_QA_ID, -1)
         if (qaId == -1L) {
             Toast.makeText(this, R.string.answer_not_found, Toast.LENGTH_SHORT).show()
             finish()
@@ -131,187 +129,219 @@ class AnswerActivity : AppCompatActivity() {
         tvQuestion.text = item.question
         tvFinalAnswer.text = item.finalAnswer
         tvDifficulty.text = difficultyLabel(item.difficulty)
-
         btnPractice.text = getString(R.string.quiz_practice_on, subjectLabel(item.subject))
         btnPractice.setOnClickListener {
-            val practiceIntent = Intent(this, QuizActivity::class.java)
-            practiceIntent.putExtra(QuizActivity.EXTRA_SUBJECT, item.subject)
-            startActivity(practiceIntent)
+            val intent = Intent(this, QuizActivity::class.java)
+            intent.putExtra(QuizActivity.EXTRA_SUBJECT, item.subject)
+            startActivity(intent)
         }
 
-        val imagePath = item.imagePath
-        val layoutImage = findViewById<LinearLayout>(R.id.layout_answer_image)
+        val layoutAnswerImage = findViewById<LinearLayout>(R.id.layout_answer_image)
         val imgAnswer = findViewById<ImageView>(R.id.img_answer)
-        if (!imagePath.isNullOrEmpty() && File(imagePath).exists()) {
-            val bmp = decodeSampledBitmap(imagePath, 1024)
-            if (bmp != null) {
-                imgAnswer.setImageBitmap(bmp)
-                layoutImage.visibility = View.VISIBLE
-            } else {
-                layoutImage.visibility = View.GONE
-            }
-        } else {
-            layoutImage.visibility = View.GONE
-        }
-
-        val stepsStr = item.steps
-        if (!stepsStr.isNullOrEmpty()) {
-            try {
-                val array = JSONArray(stepsStr)
-                for (i in 0 until array.length()) {
-                    val stepObj = array.getJSONObject(i)
-                    addStepView(layoutSteps, i + 1, stepObj)
-                }
-            } catch (e: Exception) {
-                val fallback = TextView(this)
-                fallback.text = stepsStr
-                fallback.setTextColor(getColor(R.color.auth_foreground))
-                layoutSteps.addView(fallback)
+        val imagePath = item.imagePath
+        if (!imagePath.isNullOrEmpty()) {
+            val imageFile = File(imagePath)
+            if (imageFile.exists()) {
+                imgAnswer.setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
+                layoutAnswerImage.visibility = View.VISIBLE
             }
         }
 
-        updateReviewedButtonState()
-        btnMarkReviewed.setOnClickListener {
-            onMarkReviewedClicked()
+        try {
+            val steps = JSONArray(item.steps)
+            for (i in 0 until steps.length()) {
+                val step = steps.getJSONObject(i)
+                addStepView(layoutSteps, i + 1, step)
+            }
+        } catch (e: Exception) {
+            val error = TextView(this)
+            error.text = item.steps
+            error.setTextColor(getColor(R.color.auth_foreground))
+            layoutSteps.addView(error)
         }
 
-        btnSimplify.setOnClickListener { onExtraClicked(KEY_SIMPLIFY) }
-        btnAlternative.setOnClickListener { onExtraClicked(KEY_ALTERNATIVE) }
-        btnConcepts.setOnClickListener { onExtraClicked(KEY_CONCEPTS) }
-        btnMistakes.setOnClickListener { onExtraClicked(KEY_MISTAKES) }
-        btnFollowups.setOnClickListener { onExtraClicked(KEY_FOLLOWUPS) }
+        btnSimplify.setOnClickListener { onExtraAction(KEY_SIMPLIFY) }
+        btnAlternative.setOnClickListener { onExtraAction(KEY_ALTERNATIVE) }
+        btnConcepts.setOnClickListener { onExtraAction(KEY_CONCEPTS) }
+        btnMistakes.setOnClickListener { onExtraAction(KEY_MISTAKES) }
+        btnFollowups.setOnClickListener { onExtraAction(KEY_FOLLOWUPS) }
+        btnMarkReviewed.setOnClickListener { markReviewed() }
 
-        styleExtraButtons()
+        refreshReviewButton()
+        maybeAutoReview()
+        reviewSessionStartMs = System.currentTimeMillis()
     }
 
-    private fun updateReviewedButtonState() {
-        val item = qa ?: return
-        if (item.reviewedAt > 0) {
-            btnMarkReviewed.isEnabled = false
-            btnMarkReviewed.setText(R.string.answer_reviewed)
-            btnMarkReviewed.setBackgroundColor(getColor(R.color.auth_card))
-            btnMarkReviewed.setTextColor(getColor(R.color.auth_muted_foreground))
-        } else {
-            btnMarkReviewed.isEnabled = true
-            btnMarkReviewed.setText(R.string.answer_mark_reviewed)
+    override fun onResume() {
+        super.onResume()
+        reviewSessionStartMs = System.currentTimeMillis()
+    }
+
+    override fun onPause() {
+        flushReviewSeconds()
+        super.onPause()
+    }
+
+    private fun flushReviewSeconds() {
+        val item = qa
+        val dao = qaDao
+        if (item == null || dao == null || reviewSessionStartMs <= 0) {
+            return
         }
+        val elapsedMs = System.currentTimeMillis() - reviewSessionStartMs
+        reviewSessionStartMs = 0
+        var delta = (elapsedMs / 1000L).toInt()
+        if (delta <= 0) {
+            return
+        }
+        if (delta > MAX_SESSION_SECONDS) {
+            delta = MAX_SESSION_SECONDS
+        }
+        item.reviewedSeconds += delta
+        dao.addReviewedSeconds(item.id, delta)
     }
 
-    private fun onMarkReviewedClicked() {
+    private fun maybeAutoReview() {
         val item = qa ?: return
-        if (item.reviewedAt > 0) return
-
         val now = System.currentTimeMillis()
+        if (item.reviewedAt != 0L && isSameDay(item.reviewedAt, now)) {
+            return
+        }
+        markReviewed()
+    }
+
+    private fun markReviewed() {
+        val item = qa ?: return
+        val now = System.currentTimeMillis()
+        if (item.reviewedAt != 0L && isSameDay(item.reviewedAt, now)) {
+            refreshReviewButton()
+            return
+        }
+
+        val firstReview = item.reviewedAt == 0L || !isSameDay(item.reviewedAt, now)
         item.reviewedAt = now
         qaDao?.updateReviewedAt(item.id, now)
 
-        val profile = profileDao.getByUserId(item.userId)
-        if (profile != null) {
-            XpRules.recordDailyActivity(profile, profileDao)
-            XpRules.addXp(profile, profileDao, XpRules.REVIEW)
+        if (firstReview) {
+            val profile = profileDao.getByUserId(item.userId)
+            if (profile != null) {
+                XpRules.addXp(profile, profileDao, XpRules.REVIEW)
+                Toast.makeText(this, R.string.answer_review_xp_toast, Toast.LENGTH_SHORT).show()
+            }
         }
-
-        Toast.makeText(this, R.string.answer_review_xp_toast, Toast.LENGTH_SHORT).show()
-        updateReviewedButtonState()
+        refreshReviewButton()
     }
 
-    private fun onExtraClicked(key: String) {
-        if (extrasLoading) return
+    private fun refreshReviewButton() {
+        val item = qa ?: return
+        val now = System.currentTimeMillis()
+        val doneToday = item.reviewedAt != 0L && isSameDay(item.reviewedAt, now)
+        btnMarkReviewed.isEnabled = !doneToday
+        btnMarkReviewed.setText(if (doneToday) R.string.answer_reviewed else R.string.answer_mark_reviewed)
+    }
+
+    private fun onExtraAction(key: String) {
+        if (extrasLoading) {
+            return
+        }
         activeExtraKey = key
         styleExtraButtons()
-
-        val item = qa ?: return
-        val cached = getCachedExtra(item.extrasJson, key)
-        if (!TextUtils.isEmpty(cached)) {
+        val cached = readExtraField(key)
+        if (!cached.isNullOrEmpty()) {
             tvExtras.text = cached
             return
         }
-
-        requestExtraFromAI(item, key)
+        loadExtras(key)
     }
 
-    private fun getCachedExtra(jsonStr: String?, key: String): String? {
-        if (jsonStr.isNullOrEmpty()) return null
-        return try {
-            val json = JSONObject(jsonStr)
-            if (json.has(key)) json.getString(key) else null
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun putCachedExtra(jsonStr: String?, key: String, value: String): String {
-        val json = if (!jsonStr.isNullOrEmpty()) {
-            try {
-                JSONObject(jsonStr)
-            } catch (_: Exception) {
-                JSONObject()
-            }
-        } else {
-            JSONObject()
-        }
-        json.put(key, value)
-        return json.toString()
-    }
-
-    private fun requestExtraFromAI(item: QuestionAnswer, key: String) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isEmpty() || apiKey == "YOUR_REAL_GEMINI_API_KEY" || apiKey == "YOUR_KEY_HERE") {
+    private fun loadExtras(focusKey: String) {
+        if (TextUtils.isEmpty(BuildConfig.GEMINI_API_KEY) ||
+            "YOUR_KEY_HERE" == BuildConfig.GEMINI_API_KEY
+        ) {
             Toast.makeText(this, R.string.ask_no_api_key, Toast.LENGTH_LONG).show()
             return
         }
+        val item = qa ?: return
 
         extrasLoading = true
         progressExtras.visibility = View.VISIBLE
         tvExtras.setText(R.string.answer_extras_loading)
 
-        val prompt = buildExtraPrompt(item, key)
-
+        val prompt = buildExtrasPrompt(item)
         executor?.execute {
             try {
-                val rawResponse = GeminiClient.ask(apiKey, prompt)
-                val clean = extractJson(rawResponse)
-                val json = JSONObject(clean)
-                val resultText = json.getString("result")
-
-                val updatedJson = putCachedExtra(item.extrasJson, key, resultText)
-                item.extrasJson = updatedJson
-                qaDao?.updateExtras(item.id, updatedJson)
+                val raw = GeminiClient.ask(BuildConfig.GEMINI_API_KEY, prompt)
+                val jsonText = extractJson(raw)
+                val extras = JSONObject(jsonText)
+                val payload = extras.toString()
+                item.extrasJson = payload
+                qaDao?.updateExtras(item.id, payload)
 
                 runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
                     extrasLoading = false
                     progressExtras.visibility = View.GONE
-                    if (activeExtraKey == key) {
-                        tvExtras.text = resultText
+                    val text = formatExtra(extras, focusKey)
+                    if (text.isNullOrEmpty()) {
+                        tvExtras.setText(R.string.answer_extras_error)
+                    } else {
+                        tvExtras.text = text
                     }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
                     extrasLoading = false
                     progressExtras.visibility = View.GONE
                     tvExtras.setText(R.string.answer_extras_error)
+                    Toast.makeText(this, R.string.answer_extras_error, Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    private fun buildExtraPrompt(item: QuestionAnswer, key: String): String {
-        val instruction = when (key) {
-            KEY_SIMPLIFY -> "Explain the solution to this question in simpler, everyday language suitable for a beginner."
-            KEY_ALTERNATIVE -> "Provide an alternative method or perspective to solve this exact question."
-            KEY_CONCEPTS -> "List the key concepts, rules, and formulas used in this solution with brief explanations."
-            KEY_MISTAKES -> "List the 2-3 most common mistakes students make when trying to solve this kind of question."
-            KEY_FOLLOWUPS -> "Provide 3 practice or follow-up questions that reinforce the same skill, with brief answers in parentheses."
-            else -> "Explain the solution in more detail."
+    private fun readExtraField(key: String): String? {
+        val extrasJson = qa?.extrasJson
+        if (extrasJson.isNullOrEmpty()) {
+            return null
         }
-        return "You are an AI study tutor helping a student understand their study problem.\n" +
-            "Task: $instruction\n\n" +
-            "Always respond in English.\n" +
-            "Return ONLY valid JSON (no markdown) with this structure:\n" +
-            "{\"result\": \"your detailed response text here\"}\n\n" +
-            "Question details:\n" +
+        return try {
+            formatExtra(JSONObject(extrasJson), key)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun formatExtra(extras: JSONObject, key: String): String? {
+        return try {
+            val value = extras.opt(key)
+            if (value == null || JSONObject.NULL == value) {
+                return null
+            }
+            if (value is JSONArray) {
+                val sb = StringBuilder()
+                for (i in 0 until value.length()) {
+                    if (i > 0) {
+                        sb.append("\n\n")
+                    }
+                    sb.append("• ").append(value.getString(i))
+                }
+                return sb.toString()
+            }
+            value.toString()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun buildExtrasPrompt(item: QuestionAnswer): String {
+        return "You are AI Study Mentor. Given this solved question, return ONLY valid JSON " +
+            "(no markdown) with learning support fields:\n" +
+            "{\n" +
+            "  \"simplify\": \"simpler explanation in English\",\n" +
+            "  \"alternative\": \"another way to solve in English\",\n" +
+            "  \"concepts\": [\"key concept 1\", \"key concept 2\"],\n" +
+            "  \"mistakes\": [\"common mistake 1\", \"common mistake 2\"],\n" +
+            "  \"followUps\": [\"follow-up question 1\", \"follow-up question 2\"]\n" +
+            "}\n\n" +
             "Subject: ${item.subject}\n" +
             "Difficulty: ${item.difficulty ?: "medium"}\n" +
             "Question: ${item.question}\n" +
@@ -353,7 +383,7 @@ class AnswerActivity : AppCompatActivity() {
         content.orientation = LinearLayout.VERTICAL
         val contentParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
         )
         contentParams.bottomMargin = (16 * density).toInt()
         content.layoutParams = contentParams
@@ -386,7 +416,7 @@ class AnswerActivity : AppCompatActivity() {
             tvExpr.setBackgroundColor(getColor(R.color.auth_surface))
             val exprParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
             exprParams.topMargin = (8 * density).toInt()
             tvExpr.layoutParams = exprParams
@@ -409,17 +439,6 @@ class AnswerActivity : AppCompatActivity() {
             "language" -> getString(R.string.subject_language)
             else -> getString(R.string.subject_other)
         }
-    }
-
-    private fun decodeSampledBitmap(path: String, maxDim: Int): Bitmap? {
-        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(path, opts)
-        var sample = 1
-        while (opts.outWidth / sample > maxDim || opts.outHeight / sample > maxDim) {
-            sample *= 2
-        }
-        val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sample }
-        return BitmapFactory.decodeFile(path, decodeOpts)
     }
 
     private fun difficultyLabel(difficulty: String?): String {
@@ -448,11 +467,7 @@ class AnswerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        val elapsedSeconds = ((System.currentTimeMillis() - openTimeMs) / 1000).toInt()
-        val item = qa
-        if (elapsedSeconds > 0 && item != null) {
-            qaDao?.addReviewedSeconds(item.id, elapsedSeconds)
-        }
+        flushReviewSeconds()
         executor?.shutdown()
         super.onDestroy()
     }

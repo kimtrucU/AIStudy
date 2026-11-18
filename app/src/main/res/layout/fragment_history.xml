@@ -3,34 +3,82 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
+    android:background="@drawable/bg_auth_shell_panel"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:paddingHorizontal="20dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="12dp">
 
+    <!-- Top Brand Bar: AIStudy + Profile Icon -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI"
+            android:textColor="@color/auth_foreground"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:text="Study"
+            android:textColor="#E0C8CF"
+            android:textSize="22sp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/btn_history_profile"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_history_chip"
+            android:gravity="center"
+            android:text="👤"
+            android:textColor="@color/auth_foreground"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Large Serif "History" Heading -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/history_title"
+        android:layout_marginTop="14dp"
+        android:fontFamily="serif"
+        android:text="History"
         android:textColor="@color/auth_foreground"
-        android:textSize="24sp"
+        android:textSize="40sp"
         android:textStyle="bold" />
 
+    <!-- Search Pill -->
     <EditText
         android:id="@+id/et_search"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="16dp"
         android:background="@drawable/bg_history_chip"
-        android:hint="@string/history_search_hint"
-        android:paddingHorizontal="16dp"
+        android:hint="🔍   Search history..."
+        android:inputType="text"
+        android:maxLines="1"
+        android:paddingHorizontal="18dp"
         android:textColor="@color/auth_foreground"
         android:textColorHint="@color/auth_muted_foreground"
         android:textSize="14sp" />
 
+    <!-- Filter Chips -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="14dp"
         android:scrollbars="none">
 
         <LinearLayout
@@ -43,11 +91,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_history_chip_active"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="9dp"
                 android:text="@string/history_chip_all"
                 android:textColor="@color/auth_primary_foreground"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/chip_math"
@@ -55,8 +104,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_history_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="9dp"
                 android:text="@string/subject_math"
                 android:textColor="@color/auth_foreground"
                 android:textSize="13sp" />
@@ -67,21 +116,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_history_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="9dp"
                 android:text="@string/subject_science"
-                android:textColor="@color/auth_foreground"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/chip_code"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_history_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:text="@string/subject_code"
                 android:textColor="@color/auth_foreground"
                 android:textSize="13sp" />
 
@@ -91,9 +128,21 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_history_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="9dp"
                 android:text="@string/subject_history"
+                android:textColor="@color/auth_foreground"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/chip_code"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_history_chip"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="9dp"
+                android:text="@string/subject_code"
                 android:textColor="@color/auth_foreground"
                 android:textSize="13sp" />
 
@@ -103,8 +152,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_history_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="9dp"
                 android:text="@string/subject_language"
                 android:textColor="@color/auth_foreground"
                 android:textSize="13sp" />
@@ -115,8 +164,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_history_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="9dp"
                 android:text="@string/history_chip_starred"
                 android:textColor="@color/auth_foreground"
                 android:textSize="13sp" />
@@ -131,7 +180,7 @@
         android:text="@string/quiz_practice"
         android:visibility="gone"
         app:backgroundTint="@color/auth_brand"
-        app:cornerRadius="12dp" />
+        app:cornerRadius="14dp" />
 
     <FrameLayout
         android:layout_width="match_parent"

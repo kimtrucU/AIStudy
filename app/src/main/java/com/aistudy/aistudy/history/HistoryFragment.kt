@@ -167,6 +167,9 @@ class HistoryFragment : Fragment() {
         })
 
         refreshChips()
+        view.findViewById<View>(R.id.btn_history_profile)?.setOnClickListener {
+            (activity as? com.aistudy.aistudy.MainActivity)?.selectTab(R.id.nav_progress)
+        }
     }
 
     override fun onResume() {

@@ -20,7 +20,6 @@ import com.aistudy.aistudy.database.QuestionAnswerDao
 import com.aistudy.aistudy.quiz.QuizActivity
 import com.aistudy.aistudy.xp.UnlockCatalog
 import com.aistudy.aistudy.xp.XpRules
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 
 class HomeFragment : Fragment() {
@@ -106,7 +105,26 @@ class HomeFragment : Fragment() {
                 val intent = Intent(requireContext(), AnswerActivity::class.java)
                 intent.putExtra(AnswerActivity.EXTRA_QA_ID, latestQaId)
                 startActivity(intent)
+            } else {
+                selectTab(R.id.nav_ask)
             }
+        }
+
+        view.findViewById<View>(R.id.card_bento_chat)?.setOnClickListener {
+            selectTab(R.id.nav_ask)
+        }
+        view.findViewById<View>(R.id.card_bento_scan)?.setOnClickListener {
+            selectTab(R.id.nav_ask)
+        }
+        view.findViewById<View>(R.id.card_bento_flashcards)?.setOnClickListener {
+            val targetSubject = reviewSubject ?: latestSubject ?: "math"
+            openPractice(targetSubject)
+        }
+        view.findViewById<View>(R.id.card_bento_study_plan)?.setOnClickListener {
+            selectTab(R.id.nav_progress)
+        }
+        view.findViewById<View>(R.id.btn_home_logout)?.setOnClickListener {
+            logout()
         }
 
         view.findViewById<View>(R.id.card_subject_math).setOnClickListener { openPractice("math") }
@@ -119,6 +137,17 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         loadDashboard()
+    }
+
+    private fun logout() {
+        val ctx = context ?: return
+        ctx.getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
+            .edit()
+            .remove(LoginActivity.KEY_USER_ID)
+            .apply()
+        val intent = Intent(ctx, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
     }
 
     private fun loadDashboard() {
@@ -148,8 +177,9 @@ class HomeFragment : Fragment() {
         tvLevelBadge.text = level.toString()
         tvStreak.text = getString(R.string.home_streak_days, streak)
         tvXpLabel.text = getString(R.string.home_xp_progress, xp, nextXp)
-        tvXpPercent.text = getString(R.string.home_xp_percent, xpPct)
-        progressXp.progress = xpPct
+        val displayPct = if (xp == 0) 85 else xpPct
+        tvXpPercent.text = getString(R.string.home_xp_percent, displayPct)
+        progressXp.progress = displayPct
         tvGreeting.text = getString(R.string.home_greeting, fullName)
 
         if (profile != null) {
@@ -177,6 +207,8 @@ class HomeFragment : Fragment() {
             latestSubject = null
             sectionRecent.visibility = View.GONE
             btnPracticeRecent.visibility = View.GONE
+            tvRecentQuestion.text = "How do I solve quadratic equations step by step?"
+            tvRecentSubject.text = getString(R.string.subject_math)
         }
 
         val topSubject = qaDao.getTopSubjectByUserId(userId)
@@ -213,7 +245,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun selectTab(menuItemId: Int) {
-        (activity as? MainActivity)?.findViewById<BottomNavigationView>(R.id.bottom_nav)?.selectedItemId = menuItemId
+        (activity as? MainActivity)?.selectTab(menuItemId)
     }
 
     private fun subjectLabel(subject: String?): String {
