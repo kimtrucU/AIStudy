@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.answer.AnswerActivity
 import com.aistudy.aistudy.auth.LoginActivity
@@ -168,7 +169,7 @@ class HistoryFragment : Fragment() {
 
         refreshChips()
         view.findViewById<View>(R.id.btn_history_profile)?.setOnClickListener {
-            (activity as? com.aistudy.aistudy.MainActivity)?.selectTab(R.id.nav_progress)
+            (activity as? MainActivity)?.selectTab(R.id.nav_progress)
         }
     }
 

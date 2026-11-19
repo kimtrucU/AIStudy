@@ -6,8 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +26,7 @@ import com.aistudy.aistudy.onboarding.OnboardingActivity
 import com.aistudy.aistudy.progress.ProgressFragment
 import com.aistudy.aistudy.xp.FriendSeeder
 import com.aistudy.aistudy.xp.UnlockCatalog
+import com.aistudy.aistudy.view.CustomBottomNavView
 
 class MainActivity : AppCompatActivity() {
 
@@ -38,18 +37,17 @@ class MainActivity : AppCompatActivity() {
         const val TAB_ASK = "ask"
         const val TAB_HISTORY = "history"
         const val TAB_PROGRESS = "progress"
-
-        private val NAV_ITEMS = linkedMapOf(
-            R.id.nav_home to (R.id.nav_home_icon to R.id.nav_home_label),
-            R.id.nav_ask to (R.id.nav_ask_icon to R.id.nav_ask_label),
-            R.id.nav_history to (R.id.nav_history_icon to R.id.nav_history_label),
-            R.id.nav_progress to (R.id.nav_progress_icon to R.id.nav_progress_label),
-        )
     }
 
-    private var currentTabId = R.id.nav_home
+    private lateinit var bottomNav: CustomBottomNavView
     private val notificationPermissionLauncher: ActivityResultLauncher<String> =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    fun selectTab(itemId: Int) {
+        if (::bottomNav.isInitialized) {
+            bottomNav.selectedItemId = itemId
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,15 +80,15 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        bottomNav = findViewById(R.id.bottom_nav)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            v.setPadding(
-                systemBars.left,
-                systemBars.top,
-                systemBars.right,
-                maxOf(systemBars.bottom, ime.bottom)
-            )
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            bottomNav.visibility = if (imeVisible) View.GONE else View.VISIBLE
+            val bottomInset = maxOf(systemBars.bottom, ime.bottom)
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomInset)
             insets
         }
 
@@ -100,8 +98,19 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        for (tabId in NAV_ITEMS.keys) {
-            findViewById<View>(tabId).setOnClickListener { selectTab(tabId) }
+        bottomNav.setOnItemSelectedListener { itemId ->
+            val fragment: Fragment = when (itemId) {
+                R.id.nav_home -> HomeFragment()
+                R.id.nav_ask -> AskFragment()
+                R.id.nav_history -> HistoryFragment()
+                R.id.nav_progress -> ProgressFragment()
+                else -> return@setOnItemSelectedListener false
+            }
+            supportFragmentManager
+                .beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit()
+            true
         }
 
         if (savedInstanceState == null) {
@@ -118,43 +127,9 @@ class MainActivity : AppCompatActivity() {
         handleOpenIntent(intent)
     }
 
-    fun selectTab(tabId: Int) {
-        val fragment: Fragment = when (tabId) {
-            R.id.nav_home -> HomeFragment()
-            R.id.nav_ask -> AskFragment()
-            R.id.nav_history -> HistoryFragment()
-            R.id.nav_progress -> ProgressFragment()
-            else -> return
-        }
-        currentTabId = tabId
-        refreshNavState()
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
-    }
-
-    private fun refreshNavState() {
-        val active = ContextCompat.getColor(this, R.color.nav_item_active)
-        val inactive = ContextCompat.getColor(this, R.color.nav_item_inactive)
-        for ((tabId, ids) in NAV_ITEMS) {
-            val selected = tabId == currentTabId
-            val color = if (selected) active else inactive
-            val item = findViewById<View>(tabId)
-            item.isSelected = selected
-            if (selected) {
-                item.setBackgroundResource(R.drawable.bg_side_nav_item_active)
-            } else {
-                item.background = null
-            }
-            findViewById<ImageView>(ids.first).setColorFilter(color)
-            findViewById<TextView>(ids.second).setTextColor(color)
-        }
-    }
-
     private fun handleOpenIntent(intent: Intent?) {
         if (intent == null) {
-            selectTab(R.id.nav_home)
+            bottomNav.selectedItemId = R.id.nav_home
             return
         }
         val qaId = intent.getLongExtra(EXTRA_QA_ID, -1)
@@ -162,17 +137,15 @@ class MainActivity : AppCompatActivity() {
             val answer = Intent(this, AnswerActivity::class.java)
             answer.putExtra(AnswerActivity.EXTRA_QA_ID, qaId)
             startActivity(answer)
-            selectTab(R.id.nav_history)
+            bottomNav.selectedItemId = R.id.nav_history
             return
         }
-        selectTab(
-            when (intent.getStringExtra(EXTRA_OPEN_TAB)) {
-                TAB_ASK -> R.id.nav_ask
-                TAB_HISTORY -> R.id.nav_history
-                TAB_PROGRESS -> R.id.nav_progress
-                else -> R.id.nav_home
-            }
-        )
+        bottomNav.selectedItemId = when (intent.getStringExtra(EXTRA_OPEN_TAB)) {
+            TAB_ASK -> R.id.nav_ask
+            TAB_HISTORY -> R.id.nav_history
+            TAB_PROGRESS -> R.id.nav_progress
+            else -> R.id.nav_home
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {

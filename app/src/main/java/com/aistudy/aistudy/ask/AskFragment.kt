@@ -24,6 +24,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.aistudy.aistudy.BuildConfig
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.answer.AnswerActivity
@@ -101,6 +103,13 @@ class AskFragment : Fragment() {
     private lateinit var progressLoading: ProgressBar
     private lateinit var layoutImagePreview: LinearLayout
     private lateinit var imgPreview: ImageView
+    private lateinit var scrollAsk: View
+    private lateinit var rvChat: RecyclerView
+    private lateinit var btnNewChat: View
+
+    private val chatMessages = mutableListOf<ChatMessage>()
+    private lateinit var chatAdapter: AskChatAdapter
+    private var nextMessageId = 1L
 
     private var executor: ExecutorService? = null
     private var selectedImageFile: File? = null
@@ -191,6 +200,31 @@ class AskFragment : Fragment() {
         progressLoading = view.findViewById(R.id.progress_loading)
         layoutImagePreview = view.findViewById(R.id.layout_image_preview)
         imgPreview = view.findViewById(R.id.img_preview)
+        scrollAsk = view.findViewById(R.id.scroll_ask)
+        rvChat = view.findViewById(R.id.rv_chat)
+        btnNewChat = view.findViewById(R.id.btn_new_chat)
+
+        chatAdapter = AskChatAdapter(
+            items = chatMessages,
+            onOpenDetails = { qaId ->
+                val act = activity ?: return@AskChatAdapter
+                val intent = Intent(act, AnswerActivity::class.java)
+                intent.putExtra(AnswerActivity.EXTRA_QA_ID, qaId)
+                act.startActivity(intent)
+            },
+            subjectLabelProvider = ::subjectLabel
+        )
+        rvChat.layoutManager = LinearLayoutManager(requireContext()).apply {
+            stackFromEnd = false
+        }
+        rvChat.adapter = chatAdapter
+        updateChatModeUi()
+
+        btnNewChat.setOnClickListener {
+            chatMessages.clear()
+            chatAdapter.notifyDataSetChanged()
+            updateChatModeUi()
+        }
 
         val btnRemoveImage: MaterialButton = view.findViewById(R.id.btn_remove_image)
         btnRemoveImage.setOnClickListener {
@@ -367,11 +401,34 @@ class AskFragment : Fragment() {
         val level = profile?.level ?: ProfileDefaults.LEVEL_HIGH
         val style = profile?.style ?: ProfileDefaults.STYLE_STEPWISE
 
-        val prompt = buildPrompt(level, style, questionFinal)
+        val historyContext = buildConversationContext()
+        val prompt = buildPrompt(level, style, questionFinal, historyContext)
 
         val fallbackMime = selectedMimeType
         val imagePath = file?.absolutePath
 
+        val userMsg = ChatMessage(
+            id = nextMessageId++,
+            isUser = true,
+            text = questionFinal,
+            imagePath = imagePath
+        )
+        val aiMsgId = nextMessageId++
+        val aiLoadingMsg = ChatMessage(
+            id = aiMsgId,
+            isUser = false,
+            isLoading = true
+        )
+
+        chatMessages.add(userMsg)
+        chatMessages.add(aiLoadingMsg)
+        val aiPosition = chatMessages.size - 1
+        chatAdapter.notifyItemRangeInserted(aiPosition - 1, 2)
+        updateChatModeUi()
+        rvChat.scrollToPosition(aiPosition)
+
+        clearSelectedImage()
+        editQuestion.setText("")
         setLoading(true)
 
         executor?.execute {
@@ -440,12 +497,21 @@ class AskFragment : Fragment() {
                 act.runOnUiThread {
                     if (!isAdded) return@runOnUiThread
                     setLoading(false)
-                    clearSelectedImage()
-                    editQuestion.setText("")
-
-                    val intent = Intent(act, AnswerActivity::class.java)
-                    intent.putExtra(AnswerActivity.EXTRA_QA_ID, qaId)
-                    act.startActivity(intent)
+                    val idx = chatMessages.indexOfFirst { it.id == aiMsgId }
+                    if (idx >= 0) {
+                        chatMessages[idx] = ChatMessage(
+                            id = aiMsgId,
+                            isUser = false,
+                            isLoading = false,
+                            qaId = qaId,
+                            subject = subject,
+                            difficulty = difficulty,
+                            stepsJson = stepsArray.toString(),
+                            finalAnswer = finalAnswer
+                        )
+                        chatAdapter.notifyItemChanged(idx)
+                        rvChat.smoothScrollToPosition(idx)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "ask failed", e)
@@ -453,12 +519,17 @@ class AskFragment : Fragment() {
                 act.runOnUiThread {
                     if (!isAdded) return@runOnUiThread
                     setLoading(false)
-                    val ctx = context ?: return@runOnUiThread
-                    Toast.makeText(
-                        ctx,
-                        "Error: ${e.message}",
-                        Toast.LENGTH_LONG,
-                    ).show()
+                    val idx = chatMessages.indexOfFirst { it.id == aiMsgId }
+                    if (idx >= 0) {
+                        chatMessages[idx] = ChatMessage(
+                            id = aiMsgId,
+                            isUser = false,
+                            isLoading = false,
+                            errorText = "Error: ${e.message}"
+                        )
+                        chatAdapter.notifyItemChanged(idx)
+                        rvChat.smoothScrollToPosition(idx)
+                    }
                 }
             }
         }
@@ -474,7 +545,44 @@ class AskFragment : Fragment() {
             difficulty == "hard"
     }
 
-    private fun buildPrompt(level: String, style: String, question: String): String {
+    private fun updateChatModeUi() {
+        val inChat = chatMessages.isNotEmpty()
+        scrollAsk.visibility = if (inChat) View.GONE else View.VISIBLE
+        rvChat.visibility = if (inChat) View.VISIBLE else View.GONE
+        btnNewChat.visibility = if (inChat) View.VISIBLE else View.GONE
+    }
+
+    private fun buildConversationContext(): String {
+        val recent = chatMessages.filter { !it.isLoading && it.errorText.isNullOrEmpty() }.takeLast(4)
+        if (recent.isEmpty()) return ""
+        val sb = StringBuilder("Recent conversation context:\n")
+        for (m in recent) {
+            if (m.isUser) {
+                sb.append("Student: ").append(m.text).append("\n")
+            } else {
+                sb.append("Tutor: ").append(m.finalAnswer).append("\n")
+            }
+        }
+        return sb.toString() + "\n"
+    }
+
+    private fun subjectLabel(subject: String): String {
+        return when (subject) {
+            "math" -> getString(R.string.subject_math)
+            "science" -> getString(R.string.subject_science)
+            "code" -> getString(R.string.subject_code)
+            "history" -> getString(R.string.subject_history)
+            "language" -> getString(R.string.subject_language)
+            else -> getString(R.string.subject_other)
+        }
+    }
+
+    private fun buildPrompt(
+        level: String,
+        style: String,
+        question: String,
+        historyContext: String
+    ): String {
         val levelText = when (level) {
             ProfileDefaults.LEVEL_JUNIOR -> "middle school student"
             ProfileDefaults.LEVEL_UNI -> "university student"
@@ -498,6 +606,7 @@ class AskFragment : Fragment() {
             "  \"steps\": [{\"title\": \"optional\", \"body\": \"required\", \"expr\": \"optional\"}],\n" +
             "  \"finalAnswer\": \"string\"\n" +
             "}\n\n" +
+            historyContext +
             "Question: " + question
     }
 
@@ -523,7 +632,7 @@ class AskFragment : Fragment() {
         btnCamera.isEnabled = !loading
         btnGallery.isEnabled = !loading
         btnSend.text = if (loading) "…" else "➤"
-        progressLoading.visibility = if (loading) View.VISIBLE else View.GONE
+        progressLoading.visibility = View.GONE
     }
 
     override fun onDestroyView() {
