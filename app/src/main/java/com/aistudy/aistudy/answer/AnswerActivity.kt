@@ -142,8 +142,25 @@ class AnswerActivity : AppCompatActivity() {
         if (!imagePath.isNullOrEmpty()) {
             val imageFile = File(imagePath)
             if (imageFile.exists()) {
-                imgAnswer.setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
                 layoutAnswerImage.visibility = View.VISIBLE
+                executor?.execute {
+                    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(imageFile.absolutePath, opts)
+                    var sample = 1
+                    val maxDim = 1280
+                    while (opts.outWidth / sample > maxDim || opts.outHeight / sample > maxDim) {
+                        sample *= 2
+                    }
+                    val bmp = BitmapFactory.decodeFile(
+                        imageFile.absolutePath,
+                        BitmapFactory.Options().apply { inSampleSize = sample }
+                    )
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed && bmp != null) {
+                            imgAnswer.setImageBitmap(bmp)
+                        }
+                    }
+                }
             }
         }
 

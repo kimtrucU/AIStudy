@@ -3,8 +3,10 @@ package com.aistudy.aistudy.ask
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
+import android.util.LruCache
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +21,7 @@ import com.aistudy.aistudy.R
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.Executors
 
 data class ChatMessage(
     val id: Long,
@@ -43,6 +46,20 @@ class AskChatAdapter(
     companion object {
         private const val TYPE_USER = 1
         private const val TYPE_AI = 2
+
+        private val thumbCache = LruCache<String, Bitmap>(24)
+        private val imageExecutor = Executors.newFixedThreadPool(2)
+
+        private fun decodeSampledBitmap(path: String, reqSize: Int = 512): Bitmap? {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            var sample = 1
+            while (bounds.outWidth / sample > reqSize || bounds.outHeight / sample > reqSize) {
+                sample *= 2
+            }
+            return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+        }
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -76,17 +93,30 @@ class AskChatAdapter(
         fun bind(msg: ChatMessage) {
             tvText.text = msg.text
             val path = msg.imagePath
-            if (!path.isNullOrEmpty() && File(path).exists()) {
-                val opts = BitmapFactory.Options().apply { inSampleSize = 2 }
-                val bmp = BitmapFactory.decodeFile(path, opts)
-                if (bmp != null) {
-                    imgUser.setImageBitmap(bmp)
-                    imgUser.visibility = View.VISIBLE
-                } else {
-                    imgUser.visibility = View.GONE
-                }
-            } else {
+            imgUser.tag = path
+            if (path.isNullOrEmpty()) {
+                imgUser.setImageDrawable(null)
                 imgUser.visibility = View.GONE
+                return
+            }
+            val cached = thumbCache.get(path)
+            if (cached != null) {
+                imgUser.setImageBitmap(cached)
+                imgUser.visibility = View.VISIBLE
+                return
+            }
+            imgUser.setImageDrawable(null)
+            imgUser.visibility = View.GONE
+            imageExecutor.execute {
+                if (!File(path).exists()) return@execute
+                val bmp = decodeSampledBitmap(path) ?: return@execute
+                thumbCache.put(path, bmp)
+                imgUser.post {
+                    if (imgUser.tag == path) {
+                        imgUser.setImageBitmap(bmp)
+                        imgUser.visibility = View.VISIBLE
+                    }
+                }
             }
         }
     }

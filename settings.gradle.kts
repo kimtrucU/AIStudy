@@ -24,4 +24,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "AI Study"
 include(":app")
- 

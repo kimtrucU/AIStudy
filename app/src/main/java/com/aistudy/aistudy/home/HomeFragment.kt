@@ -15,6 +15,7 @@ import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.answer.AnswerActivity
 import com.aistudy.aistudy.auth.LoginActivity
+import com.aistudy.aistudy.auth.LogoutDialogHelper
 import com.aistudy.aistudy.database.AppDatabase
 import com.aistudy.aistudy.database.QuestionAnswerDao
 import com.aistudy.aistudy.quiz.QuizActivity
@@ -22,6 +23,8 @@ import com.aistudy.aistudy.xp.UnlockCatalog
 import com.aistudy.aistudy.xp.XpRules
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class HomeFragment : Fragment() {
 
@@ -58,6 +61,7 @@ class HomeFragment : Fragment() {
     private var reviewSubject: String? = null
     private var currentUserId = -1L
     private var qaDao: QuestionAnswerDao? = null
+    private var executor: ExecutorService? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -69,6 +73,7 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        executor = Executors.newSingleThreadExecutor()
         tvLevelBadge = view.findViewById(R.id.tv_level_badge)
         tvStreak = view.findViewById(R.id.tv_streak)
         tvXpLabel = view.findViewById(R.id.tv_xp_label)
@@ -137,18 +142,27 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        loadDashboard()
+        if (!isHidden) {
+            loadDashboard()
+        }
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && isAdded) {
+            loadDashboard()
+        }
+    }
+
+    override fun onDestroyView() {
+        executor?.shutdown()
+        executor = null
+        super.onDestroyView()
     }
 
     private fun logout() {
-        val ctx = context ?: return
-        ctx.getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
-            .edit()
-            .remove(LoginActivity.KEY_USER_ID)
-            .apply()
-        val intent = Intent(ctx, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
+        val act = activity ?: return
+        LogoutDialogHelper.show(act)
     }
 
     private fun loadDashboard() {
@@ -161,72 +175,85 @@ class HomeFragment : Fragment() {
             return
         }
 
-        val db = AppDatabase.getInstance(ctx)
-        val user = db.userDao().getById(userId)
-        val profile = db.profileDao().getByUserId(userId)
-        val qaDao = db.questionAnswerDao()
-        this.qaDao = qaDao
-        currentUserId = userId
+        executor?.execute {
+            val db = AppDatabase.getInstance(ctx)
+            val user = db.userDao().getById(userId)
+            val profile = db.profileDao().getByUserId(userId)
+            val dao = db.questionAnswerDao()
+            val latest = dao.getLatestByUserId(userId)
+            val latestSubjectCount = latest?.subject?.let { dao.countBySubject(userId, it) } ?: 0
+            val topSubject = dao.getTopSubjectByUserId(userId)
+            val topSubjectCount = if (topSubject != null) dao.countBySubject(userId, topSubject) else 0
+            val cMath = dao.countBySubject(userId, "math")
+            val cScience = dao.countBySubject(userId, "science")
+            val cCode = dao.countBySubject(userId, "code")
+            val cHistory = dao.countBySubject(userId, "history")
+            val cLanguage = dao.countBySubject(userId, "language")
 
-        val fullName = user?.fullName ?: ""
-        val xp = profile?.xp ?: 0
-        val streak = profile?.streak ?: 0
-        val level = XpRules.levelFromXp(xp)
-        val xpPct = XpRules.progressPercentToNext(xp)
-        val nextXp = XpRules.nextLevelThreshold(xp)
+            val act = activity ?: return@execute
+            act.runOnUiThread {
+                if (!isAdded || view == null) return@runOnUiThread
+                this.qaDao = dao
+                currentUserId = userId
 
-        tvLevelBadge.text = level.toString()
-        tvStreak.text = getString(R.string.home_streak_days, streak)
-        tvXpLabel.text = getString(R.string.home_xp_progress, xp, nextXp)
-        val displayPct = if (xp == 0) 85 else xpPct
-        tvXpPercent.text = getString(R.string.home_xp_percent, displayPct)
-        progressXp.progress = displayPct
-        tvGreeting.text = getString(R.string.home_greeting, fullName)
+                val fullName = user?.fullName ?: ""
+                val xp = profile?.xp ?: 0
+                val streak = profile?.streak ?: 0
+                val level = XpRules.levelFromXp(xp)
+                val xpPct = XpRules.progressPercentToNext(xp)
+                val nextXp = XpRules.nextLevelThreshold(xp)
 
-        if (profile != null) {
-            activity?.findViewById<View>(R.id.main)?.setBackgroundResource(
-                UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(profile.themeId))
-            )
-        }
+                tvLevelBadge.text = level.toString()
+                tvStreak.text = getString(R.string.home_streak_days, streak)
+                tvXpLabel.text = getString(R.string.home_xp_progress, xp, nextXp)
+                val displayPct = if (xp == 0) 85 else xpPct
+                tvXpPercent.text = getString(R.string.home_xp_percent, displayPct)
+                progressXp.progress = displayPct
+                tvGreeting.text = getString(R.string.home_greeting, fullName)
 
-        val latest = qaDao.getLatestByUserId(userId)
-        if (latest != null) {
-            latestQaId = latest.id
-            latestSubject = latest.subject
-            sectionRecent.visibility = View.VISIBLE
-            tvRecentQuestion.text = latest.question
-            tvRecentSubject.text = subjectLabel(latest.subject)
-            val subjectCount = latest.subject?.let { qaDao.countBySubject(userId, it) } ?: 0
-            if (subjectCount >= MIN_PRACTICE_QA) {
-                btnPracticeRecent.visibility = View.VISIBLE
-                btnPracticeRecent.text = getString(R.string.quiz_practice_on, subjectLabel(latest.subject))
-            } else {
-                btnPracticeRecent.visibility = View.GONE
+                if (profile != null) {
+                    act.findViewById<View>(R.id.main)?.setBackgroundResource(
+                        UnlockCatalog.backgroundColorRes(UnlockCatalog.normalizeThemeId(profile.themeId))
+                    )
+                }
+
+                if (latest != null) {
+                    latestQaId = latest.id
+                    latestSubject = latest.subject
+                    sectionRecent.visibility = View.VISIBLE
+                    tvRecentQuestion.text = latest.question
+                    tvRecentSubject.text = subjectLabel(latest.subject)
+                    if (latestSubjectCount >= MIN_PRACTICE_QA) {
+                        btnPracticeRecent.visibility = View.VISIBLE
+                        btnPracticeRecent.text = getString(R.string.quiz_practice_on, subjectLabel(latest.subject))
+                    } else {
+                        btnPracticeRecent.visibility = View.GONE
+                    }
+                } else {
+                    latestQaId = -1L
+                    latestSubject = null
+                    sectionRecent.visibility = View.GONE
+                    btnPracticeRecent.visibility = View.GONE
+                    tvRecentQuestion.text = "How do I solve quadratic equations step by step?"
+                    tvRecentSubject.text = getString(R.string.subject_math)
+                }
+
+                if (topSubject != null && topSubjectCount >= MIN_PRACTICE_QA) {
+                    reviewSubject = topSubject
+                    tvReviewSubtitle.text = getString(R.string.home_review_subtitle, subjectLabel(topSubject))
+                    cardReviewSuggest.visibility = View.VISIBLE
+                } else {
+                    reviewSubject = null
+                    cardReviewSuggest.visibility = View.GONE
+                }
+
+                tvCountMath.text = getString(R.string.home_subject_count, cMath)
+                tvCountScience.text = getString(R.string.home_subject_count, cScience)
+                tvCountCode.text = getString(R.string.home_subject_count, cCode)
+                tvCountHistory.text = getString(R.string.home_subject_count, cHistory)
+                tvCountLanguage.text = getString(R.string.home_subject_count, cLanguage)
             }
-        } else {
-            latestQaId = -1L
-            latestSubject = null
-            sectionRecent.visibility = View.GONE
-            btnPracticeRecent.visibility = View.GONE
-            tvRecentQuestion.text = "How do I solve quadratic equations step by step?"
-            tvRecentSubject.text = getString(R.string.subject_math)
         }
-
-        val topSubject = qaDao.getTopSubjectByUserId(userId)
-        if (topSubject != null && qaDao.countBySubject(userId, topSubject) >= MIN_PRACTICE_QA) {
-            reviewSubject = topSubject
-            tvReviewSubtitle.text = getString(R.string.home_review_subtitle, subjectLabel(topSubject))
-            cardReviewSuggest.visibility = View.VISIBLE
-        } else {
-            reviewSubject = null
-            cardReviewSuggest.visibility = View.GONE
-        }
-
-        tvCountMath.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "math"))
-        tvCountScience.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "science"))
-        tvCountCode.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "code"))
-        tvCountHistory.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "history"))
-        tvCountLanguage.text = getString(R.string.home_subject_count, qaDao.countBySubject(userId, "language"))
     }
 
     private fun openPractice(subject: String) {

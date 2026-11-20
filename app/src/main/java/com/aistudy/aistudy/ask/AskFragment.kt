@@ -26,10 +26,12 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.aistudy.aistudy.BuildConfig
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.answer.AnswerActivity
 import com.aistudy.aistudy.auth.LoginActivity
+import com.aistudy.aistudy.auth.LogoutDialogHelper
 import com.aistudy.aistudy.database.AppDatabase
 import com.aistudy.aistudy.database.ProfileDefaults
 import com.aistudy.aistudy.database.QuestionAnswer
@@ -217,6 +219,7 @@ class AskFragment : Fragment() {
         rvChat.layoutManager = LinearLayoutManager(requireContext()).apply {
             stackFromEnd = false
         }
+        (rvChat.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         rvChat.adapter = chatAdapter
         updateChatModeUi()
 
@@ -248,23 +251,29 @@ class AskFragment : Fragment() {
         val btnSuggestion3: MaterialButton = view.findViewById(R.id.btn_suggestion_3)
         val btnSuggestion4: MaterialButton = view.findViewById(R.id.btn_suggestion_4)
 
-        btnSuggestion1.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_4) }
-        btnSuggestion2.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_1) }
-        btnSuggestion3.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_2) }
-        btnSuggestion4.setOnClickListener { editQuestion.setText(R.string.ask_suggestion_3) }
+        btnSuggestion1.setOnClickListener {
+            editQuestion.setText(R.string.ask_suggestion_4)
+            editQuestion.setSelection(editQuestion.text.length)
+        }
+        btnSuggestion2.setOnClickListener {
+            editQuestion.setText(R.string.ask_suggestion_1)
+            editQuestion.setSelection(editQuestion.text.length)
+        }
+        btnSuggestion3.setOnClickListener {
+            editQuestion.setText(R.string.ask_suggestion_2)
+            editQuestion.setSelection(editQuestion.text.length)
+        }
+        btnSuggestion4.setOnClickListener {
+            editQuestion.setText(R.string.ask_suggestion_3)
+            editQuestion.setSelection(editQuestion.text.length)
+        }
 
         view.findViewById<View>(R.id.btn_voice_orb)?.setOnClickListener {
             onCameraClick()
         }
         view.findViewById<View>(R.id.btn_ask_logout)?.setOnClickListener {
-            val ctx = context ?: return@setOnClickListener
-            ctx.getSharedPreferences(LoginActivity.PREFS_AUTH, MODE_PRIVATE)
-                .edit()
-                .remove(LoginActivity.KEY_USER_ID)
-                .apply()
-            val intent = Intent(ctx, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
+            val act = activity ?: return@setOnClickListener
+            LogoutDialogHelper.show(act)
         }
     }
 
@@ -322,27 +331,33 @@ class AskFragment : Fragment() {
     }
 
     private fun setSelectedImage(file: File, mimeType: String) {
-        val permanent = copyToPermanentQaImagesIfNeeded(file)
-        selectedImageFile = permanent
+        val qaDir = File(requireContext().filesDir, "qa_images")
         selectedMimeType = mimeType
-
-        val opts = BitmapFactory.Options()
-        opts.inJustDecodeBounds = true
-        BitmapFactory.decodeFile(permanent.absolutePath, opts)
-        var sample = 1
-        val maxDim = 1024
-        while (opts.outWidth / sample > maxDim || opts.outHeight / sample > maxDim) {
-            sample *= 2
-        }
-        val decodeOpts = BitmapFactory.Options()
-        decodeOpts.inSampleSize = sample
-        val bmp = BitmapFactory.decodeFile(permanent.absolutePath, decodeOpts)
-        imgPreview.setImageBitmap(bmp)
         layoutImagePreview.visibility = View.VISIBLE
+
+        executor?.execute {
+            val permanent = copyToPermanentQaImagesIfNeeded(file, qaDir)
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(permanent.absolutePath, opts)
+            var sample = 1
+            val maxDim = 512
+            while (opts.outWidth / sample > maxDim || opts.outHeight / sample > maxDim) {
+                sample *= 2
+            }
+            val bmp = BitmapFactory.decodeFile(
+                permanent.absolutePath,
+                BitmapFactory.Options().apply { inSampleSize = sample }
+            )
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                selectedImageFile = permanent
+                imgPreview.setImageBitmap(bmp)
+                layoutImagePreview.visibility = View.VISIBLE
+            }
+        }
     }
 
-    private fun copyToPermanentQaImagesIfNeeded(file: File): File {
-        val qaDir = File(requireContext().filesDir, "qa_images")
+    private fun copyToPermanentQaImagesIfNeeded(file: File, qaDir: File): File {
         if (file.parentFile?.absolutePath == qaDir.absolutePath) {
             return file
         }
@@ -397,13 +412,7 @@ class AskFragment : Fragment() {
         val profileDao = db.profileDao()
         val qaDao = db.questionAnswerDao()
 
-        val profile = profileDao.getByUserId(userId)
-        val level = profile?.level ?: ProfileDefaults.LEVEL_HIGH
-        val style = profile?.style ?: ProfileDefaults.STYLE_STEPWISE
-
         val historyContext = buildConversationContext()
-        val prompt = buildPrompt(level, style, questionFinal, historyContext)
-
         val fallbackMime = selectedMimeType
         val imagePath = file?.absolutePath
 
@@ -433,6 +442,11 @@ class AskFragment : Fragment() {
 
         executor?.execute {
             try {
+                val profile = profileDao.getByUserId(userId)
+                val level = profile?.level ?: ProfileDefaults.LEVEL_HIGH
+                val style = profile?.style ?: ProfileDefaults.STYLE_STEPWISE
+                val prompt = buildPrompt(level, style, questionFinal, historyContext)
+
                 val encodedImage = if (file != null && file.exists()) {
                     encodeFileBase64(file, fallbackMime)
                 } else {

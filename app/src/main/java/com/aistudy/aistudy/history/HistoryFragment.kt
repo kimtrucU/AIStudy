@@ -24,6 +24,8 @@ import com.aistudy.aistudy.database.QuestionAnswer
 import com.aistudy.aistudy.database.QuestionAnswerDao
 import com.aistudy.aistudy.quiz.QuizActivity
 import com.google.android.material.button.MaterialButton
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class HistoryFragment : Fragment() {
 
@@ -46,6 +48,7 @@ class HistoryFragment : Fragment() {
     private lateinit var adapter: HistoryAdapter
     private var qaDao: QuestionAnswerDao? = null
     private var userId = -1L
+    private var executor: ExecutorService? = null
 
     private val allItems = mutableListOf<QuestionAnswer>()
     private var subjectFilter = "all"
@@ -62,6 +65,7 @@ class HistoryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        executor = Executors.newSingleThreadExecutor()
         etSearch = view.findViewById(R.id.et_search)
         chipAll = view.findViewById(R.id.chip_all)
         chipMath = view.findViewById(R.id.chip_math)
@@ -84,8 +88,10 @@ class HistoryFragment : Fragment() {
 
                 override fun onStarClick(qa: QuestionAnswer) {
                     val dao = qaDao ?: return
-                    dao.toggleStar(qa.id)
-                    loadHistory()
+                    executor?.execute {
+                        dao.toggleStar(qa.id)
+                        loadHistory()
+                    }
                 }
             },
             ::subjectLabel,
@@ -175,26 +181,47 @@ class HistoryFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        loadHistory()
+        if (!isHidden) {
+            loadHistory()
+        }
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && isAdded) {
+            loadHistory()
+        }
+    }
+
+    override fun onDestroyView() {
+        executor?.shutdown()
+        executor = null
+        super.onDestroyView()
     }
 
     private fun loadHistory() {
-        if (context == null) {
-            return
-        }
+        val ctx = context ?: return
 
-        userId = requireContext()
+        val uid = ctx
             .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
             .getLong(LoginActivity.KEY_USER_ID, -1L)
-        if (userId == -1L) {
+        if (uid == -1L) {
             return
         }
+        userId = uid
 
-        val dao = AppDatabase.getInstance(requireContext()).questionAnswerDao()
-        qaDao = dao
-        allItems.clear()
-        allItems.addAll(dao.getAllByUserId(userId))
-        applyFilter()
+        executor?.execute {
+            val dao = AppDatabase.getInstance(ctx).questionAnswerDao()
+            val list = dao.getAllByUserId(uid)
+            val act = activity ?: return@execute
+            act.runOnUiThread {
+                if (!isAdded || view == null) return@runOnUiThread
+                qaDao = dao
+                allItems.clear()
+                allItems.addAll(list)
+                applyFilter()
+            }
+        }
     }
 
     private fun applyFilter() {

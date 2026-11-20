@@ -16,7 +16,9 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.auth.LoginActivity
+import com.aistudy.aistudy.auth.LogoutDialogHelper
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.Friend
 import com.aistudy.aistudy.database.FriendDao
 import com.aistudy.aistudy.database.Profile
 import com.aistudy.aistudy.database.ProfileDao
@@ -27,6 +29,8 @@ import com.aistudy.aistudy.quiz.QuizActivity
 import com.aistudy.aistudy.xp.FriendSeeder
 import com.aistudy.aistudy.xp.UnlockCatalog
 import com.aistudy.aistudy.xp.XpRules
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 
 class ProgressFragment : Fragment() {
@@ -94,6 +98,7 @@ class ProgressFragment : Fragment() {
     private var reviewSubject: String? = null
     private var currentProfile: Profile? = null
     private var currentLevel = 1
+    private var executor: ExecutorService? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -105,6 +110,7 @@ class ProgressFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        executor = Executors.newSingleThreadExecutor()
         tvUserEmail = view.findViewById(R.id.tv_user_email)
         btnLogout = view.findViewById(R.id.btn_logout)
         tvXpTotal = view.findViewById(R.id.tv_xp_total)
@@ -164,126 +170,141 @@ class ProgressFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        loadProgress()
+        if (!isHidden) {
+            loadProgress()
+        }
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && isAdded) {
+            loadProgress()
+        }
+    }
+
+    override fun onDestroyView() {
+        executor?.shutdown()
+        executor = null
+        super.onDestroyView()
     }
 
     private fun logout() {
-        if (context == null) {
-            return
-        }
-        requireContext()
-            .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
-            .edit()
-            .remove(LoginActivity.KEY_USER_ID)
-            .apply()
-
-        val intent = Intent(requireContext(), LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
+        val act = activity ?: return
+        LogoutDialogHelper.show(act)
     }
 
     private fun loadProgress() {
-        if (context == null) {
-            return
-        }
+        val ctx = context ?: return
 
-        val userId = requireContext()
+        val userId = ctx
             .getSharedPreferences(LoginActivity.PREFS_AUTH, Context.MODE_PRIVATE)
             .getLong(LoginActivity.KEY_USER_ID, -1L)
         if (userId == -1L) {
             return
         }
 
-        val db = AppDatabase.getInstance(requireContext())
-        val user = db.userDao().getById(userId)
-        tvUserEmail.text = user?.email ?: ""
-
-        val profileDao = db.profileDao()
-        this.profileDao = profileDao
-        val profile = profileDao.getByUserId(userId)
-        if (profile != null) {
-            XpRules.ensureWeek(profile)
-            if (profile.avatarId.isNullOrEmpty()) {
-                profile.avatarId = UnlockCatalog.AVATAR_FOX
+        executor?.execute {
+            val db = AppDatabase.getInstance(ctx)
+            val user = db.userDao().getById(userId)
+            val profileDao = db.profileDao()
+            val profile = profileDao.getByUserId(userId)
+            if (profile != null) {
+                XpRules.ensureWeek(profile)
+                if (profile.avatarId.isNullOrEmpty()) {
+                    profile.avatarId = UnlockCatalog.AVATAR_FOX
+                }
+                if (profile.themeId.isNullOrEmpty()) {
+                    profile.themeId = UnlockCatalog.THEME_DEFAULT
+                }
+                profileDao.update(profile)
             }
-            if (profile.themeId.isNullOrEmpty()) {
-                profile.themeId = UnlockCatalog.THEME_DEFAULT
+            val qaDao = db.questionAnswerDao()
+            val friendDao = db.friendDao()
+            val quizItemDao = db.quizItemDao()
+            val sessionDao = db.quizSessionDao()
+            FriendSeeder.ensureSeeded(friendDao, userId)
+
+            val all = qaDao.getAllByUserId(userId)
+            val starredCount = qaDao.countStarredByUserId(userId)
+            val attempted = quizItemDao.countAttemptedByUserId(userId)
+            val correct = quizItemDao.countCorrectByUserId(userId)
+            val reviewSeconds = qaDao.sumReviewedSecondsByUserId(userId)
+
+            val countMath = qaDao.countBySubject(userId, "math")
+            val countScience = qaDao.countBySubject(userId, "science")
+            val countCode = qaDao.countBySubject(userId, "code")
+            val countHistory = qaDao.countBySubject(userId, "history")
+            val countLanguage = qaDao.countBySubject(userId, "language")
+            val perfectCount = sessionDao.countPerfectByUserId(userId)
+
+            val topSubject = qaDao.getTopSubjectByUserId(userId)
+            val topSubjectCount = if (topSubject != null) qaDao.countBySubject(userId, topSubject) else 0
+            val improvedSubject = findImprovedSubject(quizItemDao, userId)
+            val friends = friendDao.getByOwner(userId)
+
+            val act = activity ?: return@execute
+            act.runOnUiThread {
+                if (!isAdded || view == null) return@runOnUiThread
+                this.profileDao = profileDao
+                this.currentProfile = profile
+                this.qaDao = qaDao
+                this.friendDao = friendDao
+                currentUserId = userId
+
+                tvUserEmail.text = user?.email ?: ""
+                val xp = profile?.xp ?: 0
+                val streak = profile?.streak ?: 0
+                currentLevel = XpRules.levelFromXp(xp)
+                val xpPct = XpRules.progressPercentToNext(xp)
+                val totalQuestions = all.size
+
+                tvXpTotal.text = xp.toString()
+                tvLevel.text = getString(R.string.progress_level_scholar, currentLevel)
+                tvXpPercent.text = getString(R.string.progress_xp_percent, xpPct)
+                progressXp.progress = xpPct
+                tvStatStreak.text = getString(R.string.progress_streak_value, streak)
+                tvStatQuestions.text = totalQuestions.toString()
+                tvStatStars.text = starredCount.toString()
+
+                if (attempted > 0) {
+                    val accuracyPct = ((correct * 100f) / attempted).roundToInt()
+                    tvQuizAccuracy.text = getString(
+                        R.string.progress_quiz_accuracy_value, accuracyPct, correct, attempted
+                    )
+                } else {
+                    tvQuizAccuracy.setText(R.string.progress_quiz_accuracy_empty)
+                }
+
+                tvReviewTime.text = formatReviewTime(reviewSeconds)
+
+                bindInsightsData(topSubject, topSubjectCount, improvedSubject)
+                bindReviewSuggestData(topSubject, topSubjectCount)
+                bindAvatars()
+                bindThemes()
+                bindLeaderboardData(user?.fullName, friends)
+
+                val subjectTotal = countMath + countScience + countCode + countHistory + countLanguage
+                val barDenom = if (subjectTotal > 0) subjectTotal else 1
+
+                bindSubjectRow(rowMath, tvCountMath, barMath, countMath, barDenom)
+                bindSubjectRow(rowScience, tvCountScience, barScience, countScience, barDenom)
+                bindSubjectRow(rowCode, tvCountCode, barCode, countCode, barDenom)
+                bindSubjectRow(rowHistory, tvCountHistory, barHistory, countHistory, barDenom)
+                bindSubjectRow(rowLanguage, tvCountLanguage, barLanguage, countLanguage, barDenom)
+                tvSubjectsEmpty.visibility = if (subjectTotal == 0) View.VISIBLE else View.GONE
+
+                val maxSubjectCount = maxOf(countMath, countScience, countCode, countHistory, countLanguage)
+
+                setBadge(badgeStarter, totalQuestions >= 1)
+                setBadge(badgeStars, starredCount >= 5)
+                setBadge(badgeStreak, streak >= 3)
+                setBadge(badgePerfect, perfectCount >= 1)
+                setBadge(badgeMastery, maxSubjectCount >= MASTERY_MIN)
+                setBadge(badgeScholar, xp >= 1000)
+
+                applyThemeBackground()
             }
-            profileDao.update(profile)
         }
-        currentProfile = profile
-        val qaDao = db.questionAnswerDao()
-        this.qaDao = qaDao
-        val friendDao = db.friendDao()
-        this.friendDao = friendDao
-        val quizItemDao = db.quizItemDao()
-        val sessionDao = db.quizSessionDao()
-        currentUserId = userId
-        FriendSeeder.ensureSeeded(friendDao, userId)
-
-        val all = qaDao.getAllByUserId(userId)
-
-        val xp = profile?.xp ?: 0
-        val streak = profile?.streak ?: 0
-        currentLevel = XpRules.levelFromXp(xp)
-        val xpPct = XpRules.progressPercentToNext(xp)
-        val totalQuestions = all.size
-        val starredCount = qaDao.countStarredByUserId(userId)
-
-        tvXpTotal.text = xp.toString()
-        tvLevel.text = getString(R.string.progress_level_scholar, currentLevel)
-        tvXpPercent.text = getString(R.string.progress_xp_percent, xpPct)
-        progressXp.progress = xpPct
-        tvStatStreak.text = getString(R.string.progress_streak_value, streak)
-        tvStatQuestions.text = totalQuestions.toString()
-        tvStatStars.text = starredCount.toString()
-
-        val attempted = quizItemDao.countAttemptedByUserId(userId)
-        val correct = quizItemDao.countCorrectByUserId(userId)
-        if (attempted > 0) {
-            val accuracyPct = ((correct * 100f) / attempted).roundToInt()
-            tvQuizAccuracy.text = getString(
-                R.string.progress_quiz_accuracy_value, accuracyPct, correct, attempted
-            )
-        } else {
-            tvQuizAccuracy.setText(R.string.progress_quiz_accuracy_empty)
-        }
-
-        val reviewSeconds = qaDao.sumReviewedSecondsByUserId(userId)
-        tvReviewTime.text = formatReviewTime(reviewSeconds)
-
-        bindInsights(qaDao, quizItemDao, userId)
-        bindReviewSuggest(qaDao, userId)
-        bindAvatars()
-        bindThemes()
-        bindLeaderboard(user?.fullName)
-
-        val countMath = qaDao.countBySubject(userId, "math")
-        val countScience = qaDao.countBySubject(userId, "science")
-        val countCode = qaDao.countBySubject(userId, "code")
-        val countHistory = qaDao.countBySubject(userId, "history")
-        val countLanguage = qaDao.countBySubject(userId, "language")
-        val subjectTotal = countMath + countScience + countCode + countHistory + countLanguage
-        val barDenom = if (subjectTotal > 0) subjectTotal else 1
-
-        bindSubjectRow(rowMath, tvCountMath, barMath, countMath, barDenom)
-        bindSubjectRow(rowScience, tvCountScience, barScience, countScience, barDenom)
-        bindSubjectRow(rowCode, tvCountCode, barCode, countCode, barDenom)
-        bindSubjectRow(rowHistory, tvCountHistory, barHistory, countHistory, barDenom)
-        bindSubjectRow(rowLanguage, tvCountLanguage, barLanguage, countLanguage, barDenom)
-        tvSubjectsEmpty.visibility = if (subjectTotal == 0) View.VISIBLE else View.GONE
-
-        val maxSubjectCount = maxOf(countMath, countScience, countCode, countHistory, countLanguage)
-        val perfectCount = sessionDao.countPerfectByUserId(userId)
-
-        setBadge(badgeStarter, totalQuestions >= 1)
-        setBadge(badgeStars, starredCount >= 5)
-        setBadge(badgeStreak, streak >= 3)
-        setBadge(badgePerfect, perfectCount >= 1)
-        setBadge(badgeMastery, maxSubjectCount >= MASTERY_MIN)
-        setBadge(badgeScholar, xp >= 1000)
-
-        applyThemeBackground()
     }
 
     private fun bindAvatars() {
@@ -419,21 +440,18 @@ class ProgressFragment : Fragment() {
         root.setBackgroundResource(UnlockCatalog.backgroundColorRes(themeId))
     }
 
-    private fun bindLeaderboard(fullName: String?) {
+    private fun bindLeaderboardData(fullName: String?, friends: List<Friend>) {
         layoutLeaderboard.removeAllViews()
         val profile = currentProfile
-        val friendDao = friendDao
-        if (context == null || profile == null || friendDao == null) {
+        if (context == null || profile == null) {
             return
         }
-        XpRules.ensureWeek(profile)
-        profileDao?.update(profile)
 
         val rows = mutableListOf<LeaderboardRow>()
         val youName = if (!fullName.isNullOrEmpty()) fullName else getString(R.string.progress_leaderboard_you)
         rows.add(LeaderboardRow(youName, profile.weeklyXp, true))
 
-        for (friend in friendDao.getByOwner(currentUserId)) {
+        for (friend in friends) {
             rows.add(LeaderboardRow(friend.displayName, friend.weeklyXp, false))
         }
         rows.sortByDescending { it.weeklyXp }
@@ -458,13 +476,16 @@ class ProgressFragment : Fragment() {
         }
     }
 
-    private fun bindInsights(qaDao: QuestionAnswerDao, quizItemDao: QuizItemDao, userId: Long) {
+    private fun bindInsightsData(
+        topSubject: String?,
+        topSubjectCount: Int,
+        improvedSubject: String?
+    ) {
         tvInsight1.visibility = View.GONE
         tvInsight2.visibility = View.GONE
 
         var shown = 0
-        val topSubject = qaDao.getTopSubjectByUserId(userId)
-        if (topSubject != null && qaDao.countBySubject(userId, topSubject) >= 1) {
+        if (topSubject != null && topSubjectCount >= 1) {
             tvInsight1.text = getString(
                 R.string.progress_insight_top_subject, subjectLabel(topSubject)
             )
@@ -472,7 +493,6 @@ class ProgressFragment : Fragment() {
             shown++
         }
 
-        val improvedSubject = findImprovedSubject(quizItemDao, userId)
         if (improvedSubject != null) {
             val target = if (shown == 0) tvInsight1 else tvInsight2
             target.text = getString(
@@ -520,9 +540,8 @@ class ProgressFragment : Fragment() {
         return bestSubject
     }
 
-    private fun bindReviewSuggest(qaDao: QuestionAnswerDao, userId: Long) {
-        val topSubject = qaDao.getTopSubjectByUserId(userId)
-        if (topSubject == null || qaDao.countBySubject(userId, topSubject) < MIN_PRACTICE_QA) {
+    private fun bindReviewSuggestData(topSubject: String?, topSubjectCount: Int) {
+        if (topSubject == null || topSubjectCount < MIN_PRACTICE_QA) {
             reviewSubject = null
             cardReviewSuggest.visibility = View.GONE
             return

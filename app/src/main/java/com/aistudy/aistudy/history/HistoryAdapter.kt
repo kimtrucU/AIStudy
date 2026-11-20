@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.QuestionAnswer
@@ -32,11 +33,26 @@ class HistoryAdapter(
     }
 
     fun submitList(list: List<QuestionAnswer>?) {
+        val next = list ?: emptyList()
+        val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun getOldListSize(): Int = items.size
+            override fun getNewListSize(): Int = next.size
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return items[oldItemPosition].id == next[newItemPosition].id
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                val oldItem = items[oldItemPosition]
+                val newItem = next[newItemPosition]
+                return oldItem.question == newItem.question &&
+                    oldItem.subject == newItem.subject &&
+                    oldItem.starred == newItem.starred &&
+                    oldItem.createdAt == newItem.createdAt
+            }
+        })
         items.clear()
-        if (list != null) {
-            items.addAll(list)
-        }
-        notifyDataSetChanged()
+        items.addAll(next)
+        diff.dispatchUpdatesTo(this)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {

@@ -27,6 +27,7 @@ import com.aistudy.aistudy.progress.ProgressFragment
 import com.aistudy.aistudy.xp.FriendSeeder
 import com.aistudy.aistudy.xp.UnlockCatalog
 import com.aistudy.aistudy.view.CustomBottomNavView
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,12 +41,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var bottomNav: CustomBottomNavView
+    private var activeTabId: Int = -1
+    private val bgExecutor = Executors.newSingleThreadExecutor()
     private val notificationPermissionLauncher: ActivityResultLauncher<String> =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     fun selectTab(itemId: Int) {
         if (::bottomNav.isInitialized) {
             bottomNav.selectedItemId = itemId
+            switchToTab(itemId)
         }
     }
 
@@ -76,8 +80,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        FriendSeeder.ensureSeeded(AppDatabase.getInstance(this).friendDao(), userId)
-
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         bottomNav = findViewById(R.id.bottom_nav)
@@ -99,26 +101,63 @@ class MainActivity : AppCompatActivity() {
         }
 
         bottomNav.setOnItemSelectedListener { itemId ->
-            val fragment: Fragment = when (itemId) {
-                R.id.nav_home -> HomeFragment()
-                R.id.nav_ask -> AskFragment()
-                R.id.nav_history -> HistoryFragment()
-                R.id.nav_progress -> ProgressFragment()
-                else -> return@setOnItemSelectedListener false
-            }
-            supportFragmentManager
-                .beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commit()
+            switchToTab(itemId)
             true
         }
 
         if (savedInstanceState == null) {
             handleOpenIntent(intent)
+        } else {
+            val current = supportFragmentManager.fragments.firstOrNull { !it.isHidden }
+            activeTabId = when (current) {
+                is AskFragment -> R.id.nav_ask
+                is HistoryFragment -> R.id.nav_history
+                is ProgressFragment -> R.id.nav_progress
+                else -> R.id.nav_home
+            }
+            bottomNav.selectedItemId = activeTabId
         }
 
         requestNotificationPermissionIfNeeded()
-        NotificationScheduler.schedule(this)
+        bgExecutor.execute {
+            FriendSeeder.ensureSeeded(AppDatabase.getInstance(this).friendDao(), userId)
+            NotificationScheduler.schedule(this)
+        }
+    }
+
+    private fun switchToTab(itemId: Int) {
+        if (activeTabId == itemId) return
+        val tag = "tab_$itemId"
+        val fm = supportFragmentManager
+        val tx = fm.beginTransaction()
+            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+
+        for (frag in fm.fragments) {
+            if (frag.tag?.startsWith("tab_") == true && frag.tag != tag && !frag.isHidden) {
+                tx.hide(frag)
+            }
+        }
+
+        var target = fm.findFragmentByTag(tag)
+        if (target == null) {
+            target = when (itemId) {
+                R.id.nav_home -> HomeFragment()
+                R.id.nav_ask -> AskFragment()
+                R.id.nav_history -> HistoryFragment()
+                R.id.nav_progress -> ProgressFragment()
+                else -> return
+            }
+            tx.add(R.id.fragment_container, target, tag)
+        } else {
+            tx.show(target)
+        }
+        tx.commit()
+        activeTabId = itemId
+    }
+
+    override fun onDestroy() {
+        bgExecutor.shutdown()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -129,7 +168,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleOpenIntent(intent: Intent?) {
         if (intent == null) {
-            bottomNav.selectedItemId = R.id.nav_home
+            selectTab(R.id.nav_home)
             return
         }
         val qaId = intent.getLongExtra(EXTRA_QA_ID, -1)
@@ -137,15 +176,16 @@ class MainActivity : AppCompatActivity() {
             val answer = Intent(this, AnswerActivity::class.java)
             answer.putExtra(AnswerActivity.EXTRA_QA_ID, qaId)
             startActivity(answer)
-            bottomNav.selectedItemId = R.id.nav_history
+            selectTab(R.id.nav_history)
             return
         }
-        bottomNav.selectedItemId = when (intent.getStringExtra(EXTRA_OPEN_TAB)) {
+        val targetTab = when (intent.getStringExtra(EXTRA_OPEN_TAB)) {
             TAB_ASK -> R.id.nav_ask
             TAB_HISTORY -> R.id.nav_history
             TAB_PROGRESS -> R.id.nav_progress
             else -> R.id.nav_home
         }
+        selectTab(targetTab)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
