@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_home_card"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="28dp"
+    android:paddingBottom="24dp">
+
+    <FrameLayout
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_ask_orb_circle">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_power_logout"
+            app:tint="@color/auth_brand_bright" />
+    </FrameLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Log out of AIStudy?"
+        android:textColor="@color/auth_foreground"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp"
+        android:text="Your study progress, XP, and chat history are safely saved on this device."
+        android:textColor="@color/auth_muted_foreground"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_logout_cancel"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_history_chip"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/auth_foreground"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            app:cornerRadius="999dp"
+            app:strokeColor="#45232E" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_logout_confirm"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_auth_button"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:stateListAnimator="@null"
+            android:text="Log out"
+            android:textAllCaps="false"
+            android:textColor="@color/auth_primary_foreground"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            app:cornerRadius="999dp"
+            app:rippleColor="#33FFFFFF"
+            tools:ignore="UnusedAttribute" />
+    </LinearLayout>
+
+</LinearLayout>
