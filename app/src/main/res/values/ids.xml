@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="tv_level_badge" type="id" />
+    <item name="tv_streak" type="id" />
+    <item name="tv_xp_label" type="id" />
+    <item name="tv_xp_percent" type="id" />
+    <item name="progress_xp" type="id" />
+    <item name="tv_greeting" type="id" />
+    <item name="btn_ask" type="id" />
+    <item name="btn_practice_recent" type="id" />
+    <item name="section_recent" type="id" />
+    <item name="tv_view_all" type="id" />
+    <item name="card_recent" type="id" />
+    <item name="tv_recent_question" type="id" />
+    <item name="tv_recent_subject" type="id" />
+    <item name="tv_count_math" type="id" />
+    <item name="tv_count_science" type="id" />
+    <item name="tv_count_code" type="id" />
+    <item name="tv_count_history" type="id" />
+    <item name="tv_count_language" type="id" />
+    <item name="card_subject_math" type="id" />
+    <item name="card_subject_science" type="id" />
+    <item name="card_subject_code" type="id" />
+    <item name="card_subject_history" type="id" />
+    <item name="card_subject_language" type="id" />
+    <item name="nav_ask" type="id" />
+    <item name="nav_history" type="id" />
+    <item name="bottom_nav" type="id" />
+
+    <item name="et_search" type="id" />
+    <item name="chip_all" type="id" />
+    <item name="chip_math" type="id" />
+    <item name="chip_science" type="id" />
+    <item name="chip_code" type="id" />
+    <item name="chip_history" type="id" />
+    <item name="chip_language" type="id" />
+    <item name="chip_starred" type="id" />
+    <item name="btn_practice" type="id" />
+    <item name="rv_history" type="id" />
+    <item name="tv_empty" type="id" />
+</resources>

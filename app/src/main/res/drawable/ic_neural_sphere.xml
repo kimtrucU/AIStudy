@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <!-- Ambient radial crimson glow -->
+    <path
+        android:pathData="M100,10 A90,90 0 1,1 99.9,10 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="100"
+                android:centerY="100"
+                android:gradientRadius="90"
+                android:type="radial">
+                <item android:color="#66FF4772" android:offset="0.0" />
+                <item android:color="#33B81D43" android:offset="0.45" />
+                <item android:color="#146E0D25" android:offset="0.75" />
+                <item android:color="#00000000" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Outer wireframe sphere -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M100,28 A72,72 0 1,1 99.9,28 Z"
+        android:strokeWidth="1.2"
+        android:strokeColor="#66FF6B8E" />
+    <!-- Tilted orbital ring 1 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M20,115 C30,72 150,45 180,85 C190,128 50,155 20,115 Z"
+        android:strokeWidth="2.2"
+        android:strokeColor="#CCFF5C7C" />
+    <!-- Tilted orbital ring 2 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M30,75 C65,38 168,82 170,125 C135,162 32,118 30,75 Z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#99FF8DA6" />
+    <!-- Tilted orbital ring 3 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M65,24 C112,20 155,140 135,176 C88,180 45,60 65,24 Z"
+        android:strokeWidth="1.4"
+        android:strokeColor="#80E0315B" />
+    <!-- Inner energy sphere -->
+    <path
+        android:fillColor="#26FF4772"
+        android:pathData="M100,56 A44,44 0 1,1 99.9,56 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#B3FF7597" />
+    <!-- Core glowing nucleus -->
+    <path
+        android:pathData="M100,76 A24,24 0 1,1 99.9,76 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="100"
+                android:centerY="100"
+                android:gradientRadius="24"
+                android:type="radial">
+                <item android:color="#FFFFFFFF" android:offset="0.0" />
+                <item android:color="#FFFF7597" android:offset="0.4" />
+                <item android:color="#CCD92B55" android:offset="0.8" />
+                <item android:color="#00000000" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Neural nodes -->
+    <path
+        android:fillColor="#FFFFB3C6"
+        android:pathData="M142,68 A3.5,3.5 0 1,1 141.9,68 Z M58,128 A3,3 0 1,1 57.9,128 Z M132,136 A3,3 0 1,1 131.9,136 Z M68,66 A2.5,2.5 0 1,1 67.9,66 Z" />
+</vector>
+

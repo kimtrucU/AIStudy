@@ -15,6 +15,8 @@ import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
+
 import com.aistudy.aistudy.database.User
 
 class RegisterActivity : AppCompatActivity() {
@@ -30,7 +32,13 @@ class RegisterActivity : AppCompatActivity() {
         setContentView(R.layout.auth_activity_register)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            v.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                maxOf(systemBars.bottom, ime.bottom)
+            )
             insets
         }
         editFullName = findViewById(R.id.edit_full_name)
@@ -74,7 +82,7 @@ class RegisterActivity : AppCompatActivity() {
         val user = User(
             fullName = fullName,
             email = email,
-            password = password
+            password = PasswordHasher.hash(password)
         )
 
         try {
@@ -83,6 +91,10 @@ class RegisterActivity : AppCompatActivity() {
                 .edit()
                 .putLong(LoginActivity.KEY_USER_ID, userId)
                 .apply()
+
+            ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), userId)
+
+
 
             Toast.makeText(this, R.string.auth_success_register, Toast.LENGTH_SHORT).show()
             val intent = Intent(this, MainActivity::class.java).apply {

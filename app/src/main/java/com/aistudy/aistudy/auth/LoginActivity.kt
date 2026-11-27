@@ -9,12 +9,13 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.aistudy.aistudy.MainActivity
 import com.aistudy.aistudy.R
 import com.aistudy.aistudy.database.AppDatabase
+import com.aistudy.aistudy.database.ProfileDefaults
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -69,22 +70,30 @@ class LoginActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.auth_error_password_short, Toast.LENGTH_SHORT).show()
             return
         }
-        val userDao = AppDatabase.getInstance(this).userDao()
-        val user = userDao.findByEmail(email)
+        try {
+            val userDao = AppDatabase.getInstance(this).userDao()
+            val user = userDao.findByEmail(email)
 
-        if ((user == null) || (password != user.password)) {
-            Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
-            return
-        }
+            if (user == null || !PasswordHasher.matches(password, user.password)) {
+                Toast.makeText(this, R.string.auth_error_invalid_credentials, Toast.LENGTH_SHORT).show()
+                return
+            }
 
-        getSharedPreferences(PREFS_AUTH, MODE_PRIVATE).edit {
-            putLong(KEY_USER_ID, user.id)
-        }
+            getSharedPreferences(PREFS_AUTH, MODE_PRIVATE)
+                .edit()
+                .putLong(KEY_USER_ID, user.id)
+                .apply()
 
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            ProfileDefaults.ensureExists(AppDatabase.getInstance(this).profileDao(), user.id)
+
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, R.string.auth_error_unknown, Toast.LENGTH_SHORT).show()
         }
-        startActivity(intent)
-        finish()
     }
 }

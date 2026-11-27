@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Deep crimson gradient base -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:centerColor="#290C16"
+                android:endColor="#4D1226"
+                android:startColor="#17090E" />
+            <corners android:radius="22dp" />
+            <stroke
+                android:width="1.2dp"
+                android:color="#66D92B55" />
+        </shape>
+    </item>
+    <!-- Subtle wave glow overlay on right side -->
+    <item
+        android:bottom="10dp"
+        android:left="110dp"
+        android:right="2dp"
+        android:top="10dp">
+        <shape android:shape="oval">
+            <gradient
+                android:centerColor="#26E63963"
+                android:endColor="#00000000"
+                android:gradientRadius="140dp"
+                android:startColor="#4DFF4772"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>
+
